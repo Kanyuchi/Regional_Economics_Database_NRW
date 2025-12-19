@@ -1,0 +1,77 @@
+================================================================================
+RUHR AREA COMPARATIVE ANALYSIS
+Employment by Vocational Qualification (2008-2024)
+================================================================================
+
+CITIES ANALYZED
+--------------------------------------------------------------------------------
+  05112: Duisburg
+  05911: Bochum
+  05913: Dortmund
+  05113: Essen
+  05914: Gelsenkirchen
+
+OVERALL STATISTICS
+--------------------------------------------------------------------------------
+Total records: 85
+Period: 2008-2024 (17 years)
+Cities: 5
+
+CITY-SPECIFIC STATISTICS
+--------------------------------------------------------------------------------
+
+Duisburg
+  Years covered: 2008 - 2024
+  2024 Employment: 346,070
+  2008 Employment: 287,489
+  Change (2008-2024): +58,581 (+20.38%)
+  Average: 300,492
+  Peak: 346,070
+  Low: 153,937
+
+Bochum
+  Years covered: 2008 - 2024
+  2024 Employment: 268,983
+  2008 Employment: 221,454
+  Change (2008-2024): +47,529 (+21.46%)
+  Average: 232,035
+  Peak: 268,983
+  Low: 118,389
+
+Dortmund
+  Years covered: 2008 - 2024
+  2024 Employment: 435,353
+  2008 Employment: 332,359
+  Change (2008-2024): +102,994 (+30.99%)
+  Average: 367,400
+  Peak: 435,353
+  Low: 182,943
+
+Essen
+  Years covered: 2008 - 2024
+  2024 Employment: 414,934
+  2008 Employment: 332,391
+  Change (2008-2024): +82,543 (+24.83%)
+  Average: 357,049
+  Peak: 414,934
+  Low: 181,454
+
+Gelsenkirchen
+  Years covered: 2008 - 2024
+  2024 Employment: 136,611
+  2008 Employment: 117,913
+  Change (2008-2024): +18,698 (+15.86%)
+  Average: 121,633
+  Peak: 136,611
+  Low: 62,470
+
+RANKINGS (2024)
+--------------------------------------------------------------------------------
+  1. Dortmund: 435,353
+  2. Essen: 414,934
+  3. Duisburg: 346,070
+  4. Bochum: 268,983
+  5. Hagen: 136,611
+
+
+Analysis generated: 2025-12-17 16:39:03

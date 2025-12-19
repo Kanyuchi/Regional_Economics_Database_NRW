@@ -1,0 +1,415 @@
+{
+  "metadata": {
+    "project": "Regional Economics Database for NRW",
+    "description": "Registry of all data tables to be extracted, transformed, and loaded",
+    "created_at": "2025-12-16",
+    "last_updated": "2025-12-18",
+    "notes": "2025-12-18: Fixed notes field bug in loader. Completed 14 of 17 Regional DB tables (82%). Recent additions: unemployment, employment by sector, construction industry (30 years), business establishments by size and sector (18 sectors)."
+  },
+  "sources": {
+    "regional_db": {
+      "name": "Regional Database Germany",
+      "url": "https://www.regionalstatistik.de/",
+      "api_version": "2020"
+    },
+    "state_db": {
+      "name": "State Database North Rhine-Westphalia",
+      "url": "https://www.landesdatenbank.nrw.de/",
+      "api_version": null
+    },
+    "ba": {
+      "name": "Federal Employment Agency (Bundesagentur für Arbeit)",
+      "url": "https://statistik.arbeitsagentur.de/",
+      "api_version": null
+    }
+  },
+  "tables": {
+    "regional_db": [
+      {
+        "table_id": "12411-03-03-4",
+        "description": "Population by gender, nationality, and age groups as of December 31",
+        "category": "demographics",
+        "extractor_script": "src/extractors/regional_db/demographics_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_12411_03_03_4_population.py",
+        "legacy_script": "run_demographics_etl.py",
+        "transformer": "src/transformers/demographics_transformer.py",
+        "status": "completed",
+        "available_period": "2011-2024",
+        "records_loaded": 17556,
+        "completed_at": "2025-12-16",
+        "job_id": "12411-03-03-4_923273039",
+        "notes": "First table completed. Population structure data by gender, nationality, age groups."
+      },
+      {
+        "table_id": "13111-01-03-4",
+        "description": "Employees subject to social insurance at workplace by gender and nationality - Reference date June 30",
+        "category": "labor_market",
+        "extractor_script": "src/extractors/regional_db/employment_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_13111_01_03_4_employment.py",
+        "transformer": "src/transformers/employment_transformer.py",
+        "status": "completed",
+        "available_period": "2011-2024",
+        "records_loaded": 798,
+        "completed_at": "2025-12-17",
+        "notes": "Employment at workplace by gender/nationality. Reference date June 30."
+      },
+      {
+        "table_id": "13111-07-05-4",
+        "description": "Employees subject to social insurance at workplace by gender, nationality, and economic sectors - Reference date June 30",
+        "category": "labor_market",
+        "extractor_script": "src/extractors/regional_db/employment_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_13111_07_05_4_employment_sector.py",
+        "transformer": "src/transformers/employment_transformer.py",
+        "status": "completed",
+        "available_period": "2008-2024",
+        "records_loaded": 19134,
+        "completed_at": "2025-12-17",
+        "notes": "Employment by economic sector. Multi-year extraction (17 API calls). Data validated for Duisburg (2008-2024)."
+      },
+      {
+        "table_id": "13111-03-02-4",
+        "description": "Employees with employment scope (full-time/part-time)",
+        "category": "labor_market",
+        "extractor_script": "src/extractors/regional_db/employment_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_13111_03_02_4_employment_scope.py",
+        "transformer": "src/transformers/employment_transformer.py",
+        "status": "completed",
+        "available_period": "2008-2024",
+        "records_loaded": 907,
+        "completed_at": "2025-12-17",
+        "notes": "Full-time vs part-time employment. Multi-year extraction (17 years). Employment scope stored in notes field."
+      },
+      {
+        "table_id": "13111-11-04-4",
+        "description": "Employees with type of vocational education qualification",
+        "category": "labor_market",
+        "extractor_script": "src/extractors/regional_db/employment_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_13111_11_04_4_employment_qualification.py",
+        "transformer": "src/transformers/employment_transformer.py",
+        "status": "completed",
+        "available_period": "2008-2024",
+        "records_loaded": 4161,
+        "completed_at": "2025-12-17",
+        "notes": "Vocational qualifications at workplace. Multi-year extraction (17 years). Qualification types stored in notes field."
+      },
+      {
+        "table_id": "13111-02-02-4",
+        "description": "Employees subject to social insurance at place of residence by gender and nationality",
+        "category": "labor_market",
+        "extractor_script": "src/extractors/regional_db/employment_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_13111_02_02_4_employment_residence.py",
+        "transformer": "src/transformers/employment_transformer.py",
+        "status": "completed",
+        "available_period": "2008-2024",
+        "records_loaded": 1083,
+        "completed_at": "2025-12-17",
+        "notes": "Employment at residence (vs workplace). Multi-year extraction (17 years). Duisburg verified: 148K→368K employees."
+      },
+      {
+        "table_id": "13111-04-02-4",
+        "description": "Employees at place of residence with employment scope",
+        "category": "labor_market",
+        "extractor_script": "src/extractors/regional_db/employment_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_13111_04_02_4_employment_scope_residence.py",
+        "transformer": "src/transformers/employment_transformer.py",
+        "status": "completed",
+        "available_period": "2008-2024",
+        "records_loaded": 3249,
+        "completed_at": "2025-12-17",
+        "indicator_id": 15,
+        "notes": "Full-time/part-time by residence. Already extracted as indicator 15."
+      },
+      {
+        "table_id": "13111-12-03-4",
+        "description": "Employees at place of residence with type of vocational education qualification",
+        "category": "labor_market",
+        "extractor_script": "src/extractors/regional_db/employment_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_13111_12_03_4_employment_qualification_residence.py",
+        "transformer": "src/transformers/employment_transformer.py",
+        "status": "completed",
+        "available_period": "2008-2024",
+        "records_loaded": 3705,
+        "completed_at": "2025-12-17",
+        "indicator_id": 16,
+        "notes": "Vocational qualifications by residence. Already extracted as indicator 16."
+      },
+      {
+        "table_id": "13211-02-05-4",
+        "description": "Unemployed by selected groups and unemployment rates – Annual average",
+        "category": "labor_market",
+        "extractor_script": "src/extractors/regional_db/employment_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_13211_02_05_4_unemployment.py",
+        "transformer": "src/transformers/employment_transformer.py",
+        "status": "completed",
+        "available_period": "2001-2024",
+        "records_loaded": 1368,
+        "completed_at": "2025-12-18",
+        "indicator_id": 18,
+        "notes": "Unemployment data including unemployed persons by category (total, foreign, disabled, age groups, long-term) and unemployment rates. 24 years of data (2001-2024) for NRW districts."
+      },
+      {
+        "table_id": "13312-01-05-4",
+        "description": "Employed persons by economic sectors – Annual average",
+        "category": "labor_market",
+        "extractor_script": "src/extractors/regional_db/employment_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_13312_01_05_4_employed_sector.py",
+        "transformer": "src/transformers/employment_transformer.py",
+        "status": "completed",
+        "available_period": "2000-2023",
+        "records_loaded": 1368,
+        "completed_at": "2025-12-18",
+        "indicator_id": 19,
+        "notes": "All employed persons by sector (annual average). WIDE format table with sectors in columns. Covers all 24 years (2000-2023) for NRW districts. Values in thousands."
+      },
+      {
+        "table_id": "44231-01-03-4",
+        "description": "Establishments, active persons, construction industry turnover – Reference date June 30",
+        "category": "economic_activity",
+        "extractor_script": "src/extractors/regional_db/employment_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_44231_01_03_4_construction.py",
+        "transformer": "src/transformers/employment_transformer.py",
+        "status": "completed",
+        "available_period": "1995-2024",
+        "records_loaded": 1684,
+        "completed_at": "2025-12-18",
+        "indicator_id": 20,
+        "notes": "Construction industry employees - 30 years of data (1995-2024). Shows significant decline in Ruhr cities: Dortmund -60.6%, Essen -55.6%, Duisburg -46.4%, Bochum -22%, Gelsenkirchen -14.8%. VERIFIED."
+      },
+      {
+        "table_id": "44231-01-02-4",
+        "description": "Establishments, active persons, total turnover – Reference date June 30",
+        "category": "economic_activity",
+        "extractor_script": "src/extractors/regional_db/employment_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_44231_01_02_4_total_turnover.py",
+        "transformer": "src/transformers/employment_transformer.py",
+        "status": "completed",
+        "available_period": "1995-2024",
+        "records_loaded": 1684,
+        "completed_at": "2025-12-18",
+        "indicator_id": 21,
+        "notes": "Total turnover variant of construction industry (Bauhauptgewerbe) - 30 years (1995-2024). Same data as 44231-01-03-4 (construction employees). Both tables from same source. VERIFIED."
+      },
+      {
+        "table_id": "52111-01-02-4",
+        "description": "Establishments by employee size classes",
+        "category": "economic_activity",
+        "extractor_script": "src/extractors/regional_db/business_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_52111_01_02_4_branches_size.py",
+        "transformer": "src/transformers/business_transformer.py",
+        "status": "completed",
+        "available_period": "2019-2023",
+        "records_loaded": 1425,
+        "completed_at": "2025-12-18",
+        "indicator_id": 22,
+        "notes": "5 size classes (0-10, 10-50, 50-250, 250+, Total) × 57 regions × 5 years. Recent data only. VERIFIED."
+      },
+      {
+        "table_id": "52111-02-01-4",
+        "description": "Establishments by selected economic sections (WZ 2008)",
+        "category": "economic_activity",
+        "extractor_script": "src/extractors/regional_db/business_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_52111_02_01_4_branches_sector.py",
+        "transformer": "src/transformers/business_transformer.py",
+        "status": "completed",
+        "available_period": "2006-2023",
+        "records_loaded": 18424,
+        "completed_at": "2025-12-18",
+        "indicator_id": 23,
+        "notes": "18 economic sectors (WZ 2008: B-S) × 58 regions × 18 years. Sector-level business distribution. VERIFIED."
+      },
+      {
+        "table_id": "52311-01-04-4",
+        "description": "Business registrations, deregistrations – Annual total",
+        "category": "economic_activity",
+        "extractor_script": null,
+        "etl_script": null,
+        "transformer": null,
+        "status": "pending",
+        "available_period": null,
+        "records_loaded": 0,
+        "completed_at": null,
+        "notes": "Business dynamics (new/closed)"
+      },
+      {
+        "table_id": "52411-02-01-4",
+        "description": "Corporate insolvency applications filed – Annual total",
+        "category": "economic_activity",
+        "extractor_script": null,
+        "etl_script": null,
+        "transformer": null,
+        "status": "pending",
+        "available_period": null,
+        "records_loaded": 0,
+        "completed_at": null,
+        "notes": "Insolvency data"
+      },
+      {
+        "table_id": "82000-04-01-4",
+        "description": "Additional table (description not provided)",
+        "category": "other",
+        "extractor_script": null,
+        "etl_script": null,
+        "transformer": null,
+        "status": "pending",
+        "available_period": null,
+        "records_loaded": 0,
+        "completed_at": null,
+        "notes": "Need to check table content"
+      }
+    ],
+    "state_db": [
+      {
+        "table_id": "71517-01i",
+        "description": "Municipal finances: Receipts by selected types of receipts",
+        "category": "public_finance",
+        "status": "pending"
+      },
+      {
+        "table_id": "82711-01i",
+        "description": "Gross domestic product and gross value added by economic sectors",
+        "category": "economic_activity",
+        "status": "pending"
+      },
+      {
+        "table_id": "82711-06i",
+        "description": "Employee compensation by economic sectors and per employee",
+        "category": "labor_market",
+        "status": "pending"
+      },
+      {
+        "table_id": "73111-07iz",
+        "description": "Income tax: Taxpayers, total income, income tax by income size classes",
+        "category": "public_finance",
+        "status": "pending"
+      },
+      {
+        "table_id": "73111-030i",
+        "description": "Income and wage tax from 2020: Alternative income tax table",
+        "category": "public_finance",
+        "status": "pending"
+      },
+      {
+        "table_id": "46271-01i",
+        "description": "Supra-local roads in total by road classes",
+        "category": "infrastructure",
+        "status": "pending"
+      },
+      {
+        "table_id": "12411-9k06",
+        "description": "Municipal profile: Population by gender, nationality, and age groups",
+        "category": "demographics",
+        "status": "pending"
+      },
+      {
+        "table_id": "22421-02i",
+        "description": "Persons in need of care and benefit recipients by care level",
+        "category": "healthcare",
+        "status": "pending"
+      },
+      {
+        "table_id": "22411-02i",
+        "description": "Persons in need of care in outpatient services",
+        "category": "healthcare",
+        "status": "pending"
+      },
+      {
+        "table_id": "22411-01i",
+        "description": "Outpatient services by facility type and personnel",
+        "category": "healthcare",
+        "status": "pending"
+      },
+      {
+        "table_id": "22412-01i",
+        "description": "Residential care facilities: Available places and personnel",
+        "category": "healthcare",
+        "status": "pending"
+      },
+      {
+        "table_id": "22412-02i",
+        "description": "Residential care facilities: Persons in need of care by care level",
+        "category": "healthcare",
+        "status": "pending"
+      },
+      {
+        "table_id": "23111-12i",
+        "description": "Full-time doctors by gender",
+        "category": "healthcare",
+        "status": "pending"
+      },
+      {
+        "table_id": "23111-01i",
+        "description": "Number of hospitals and beds provided by type of provider",
+        "category": "healthcare",
+        "status": "pending"
+      },
+      {
+        "table_id": "12211-132i",
+        "description": "Population by migration background, employment status, and gender",
+        "category": "demographics",
+        "status": "pending"
+      },
+      {
+        "table_id": "12211-124i",
+        "description": "Population by employment status, nationality, and gender",
+        "category": "demographics",
+        "status": "pending"
+      },
+      {
+        "table_id": "12211-114i",
+        "description": "Population by personal net income and gender",
+        "category": "demographics",
+        "status": "pending"
+      }
+    ],
+    "ba": [
+      {
+        "table_id": "ba-employment-wages",
+        "description": "Employment and Wage Data (Table 8)",
+        "category": "labor_market",
+        "source_url": "https://statistik.arbeitsagentur.de/...",
+        "status": "pending"
+      },
+      {
+        "table_id": "ba-commuter-inbound",
+        "description": "Inbound Commuter Statistics",
+        "category": "mobility",
+        "status": "pending"
+      },
+      {
+        "table_id": "ba-commuter-outbound",
+        "description": "Outbound Commuter Statistics",
+        "category": "mobility",
+        "status": "pending"
+      }
+    ]
+  },
+  "summary": {
+    "total_tables": 37,
+    "completed": 14,
+    "in_progress": 0,
+    "pending": 23,
+    "by_source": {
+      "regional_db": {"total": 17, "completed": 14, "pending": 3},
+      "state_db": {"total": 17, "completed": 0, "pending": 17},
+      "ba": {"total": 3, "completed": 0, "pending": 3}
+    },
+    "by_category": {
+      "demographics": 5,
+      "labor_market": 12,
+      "economic_activity": 8,
+      "public_finance": 3,
+      "healthcare": 6,
+      "infrastructure": 1,
+      "mobility": 2
+    },
+    "database_statistics": {
+      "total_records": 73080,
+      "indicators_defined": 23,
+      "indicators_with_data": 14,
+      "years_covered": "1995-2024",
+      "regions": 58,
+      "last_extraction": "2025-12-18"
+    }
+  }
+}
+
