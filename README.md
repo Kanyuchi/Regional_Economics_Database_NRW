@@ -2,16 +2,16 @@
 ## AI-Powered Economic Analysis Infrastructure
 
 [![Project Status](https://img.shields.io/badge/status-active-green)]()
-[![Progress](https://img.shields.io/badge/progress-82%25-brightgreen)]()
+[![Progress](https://img.shields.io/badge/progress-100%25-brightgreen)]()
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)]()
 [![PostgreSQL](https://img.shields.io/badge/postgresql-15+-blue.svg)]()
-[![Records](https://img.shields.io/badge/records-73,080-orange)]()
+[![Records](https://img.shields.io/badge/records-86,728-orange)]()
 
 ---
 
 ## Overview
 
-A comprehensive data engineering project building production-grade infrastructure for regional economic analysis in North Rhine-Westphalia (NRW), Germany's most populous state. This system integrates multi-source economic data across 58 districts spanning 30 years of history, powering AI-driven research and analysis on post-industrial economic transformation.
+A comprehensive data engineering project building production-grade infrastructure for regional economic analysis in North Rhine-Westphalia (NRW), Germany's most populous state. This system integrates multi-source economic data across 58 districts spanning 30 years of history, enabling advanced economic research and analysis.
 
 **Project Impact:**
 - Consolidating fragmented public databases from three major German statistical agencies into a unified analytical platform
@@ -23,21 +23,20 @@ A comprehensive data engineering project building production-grade infrastructur
 This project demonstrates end-to-end data engineering capabilities including API integration, data transformation, database design, and automated quality assurance workflows. The system employs sophisticated data validation techniques using five major Ruhr cities (Dortmund, Essen, Duisburg, Bochum, Gelsenkirchen) as reference points to ensure data accuracy and completeness across all 58 NRW districts.
 
 ### Key Features
-- ✅ **73,080 records** across 14 economic indicators
+- ✅ **86,728 records** across 27 economic indicators
 - ✅ **30 years** of historical data (1995-2024)
 - ✅ **58 NRW districts** with complete coverage
-- ✅ **5 Ruhr cities** focus for thesis research
 - ✅ **Automated verification** with time series analysis
-- ✅ **8 SQL analysis scripts** ready for thesis
+- ✅ **9 SQL analysis scripts** ready for data exploration
 
 ### Current Progress
 
 | Data Source | Tables | Completed | Progress |
 |-------------|--------|-----------|----------|
-| Regional Database Germany | 17 | 14 | **82%** ✅ |
+| Regional Database Germany | 17 | 17 | **100%** ✅ |
 | State Database NRW | 17 | 0 | 0% |
 | Federal Employment Agency | 3 | 0 | 0% |
-| **Total** | **37** | **14** | **38%** |
+| **Total** | **37** | **17** | **46%** |
 
 ---
 
@@ -64,7 +63,7 @@ python pipelines/regional_db/etl_13312_01_05_4_employed_sector.py
 # Verify data quality and Ruhr cities coverage
 python scripts/verification/verify_extraction_timeseries.py --indicator <ID>
 
-# With CSV export for thesis analysis
+# With CSV export for analysis
 python scripts/verification/verify_extraction_timeseries.py --indicator <ID> --export-csv
 ```
 
@@ -114,13 +113,16 @@ Regional Economics Database for NRW/
 │   └── validation/                      # Data validation modules
 │
 ├── 📁 pipelines/                        # ETL pipeline scripts
-│   ├── regional_db/                     # 14 operational pipelines
+│   ├── regional_db/                     # 17 operational pipelines
 │   │   ├── etl_12411_03_03_4_population.py
 │   │   ├── etl_13111_*_employment*.py   # 8 employment pipelines
 │   │   ├── etl_13211_02_05_4_unemployment.py
 │   │   ├── etl_13312_01_05_4_employed_sector.py
 │   │   ├── etl_44231_*_construction*.py # 2 construction pipelines
-│   │   └── etl_52111_*_branches*.py     # 2 business pipelines
+│   │   ├── etl_52111_*_branches*.py     # 2 business pipelines
+│   │   ├── etl_52311_01_04_4_business_registrations.py
+│   │   ├── etl_52411_02_01_4_corporate_insolvencies.py
+│   │   └── etl_82000_04_01_4_employee_compensation.py
 │   ├── state_db/                        # State DB pipelines (pending)
 │   ├── ba/                              # Federal Agency pipelines (pending)
 │   └── TEMPLATE_etl_pipeline.py         # Pipeline template
@@ -153,7 +155,11 @@ Regional Economics Database for NRW/
 │   └── queries/                         # Analysis SQL scripts
 │       ├── branches_by_sector_analysis.sql
 │       ├── branches_by_size_analysis.sql
+│       ├── business_registrations_thesis_analysis.sql
+│       ├── business_registrations_verification.sql
 │       ├── construction_industry_analysis.sql
+│       ├── corporate_insolvencies_verification.sql
+│       ├── quick_data_test.sql
 │       └── total_turnover_analysis.sql
 │
 ├── 📁 docs/                             # Documentation
@@ -194,7 +200,7 @@ Regional Economics Database for NRW/
 │   │   ├── table_registry.json          # Table tracking ⭐
 │   │   └── job_cache.json               # API job cache
 │   ├── analysis/                        # Analysis outputs
-│   │   └── timeseries/                  # CSV exports for thesis
+│   │   └── timeseries/                  # CSV exports for analysis
 │   ├── processed/                       # Transformed data
 │   └── raw/                             # Raw API responses
 │
@@ -238,7 +244,7 @@ Regional Economics Database for NRW/
 
 ### 1. Regional Database Germany (Regionalstatistik)
 **URL:** https://www.regionalstatistik.de/  
-**Status:** 🟢 14/17 tables completed (82%)
+**Status:** 🟢 17/17 tables completed (100%) ✅
 
 | Table ID | Description | Years | Records | Status |
 |----------|-------------|-------|---------|--------|
@@ -256,9 +262,9 @@ Regional Economics Database for NRW/
 | 44231-01-02-4 | **Total turnover** | **1995-2024** | 1,684 | ✅ |
 | 52111-01-02-4 | **Establishments by size** | **2019-2023** | 1,425 | ✅ |
 | 52111-02-01-4 | **Establishments by sector** | **2006-2023** | 18,424 | ✅ |
-| 52311-01-04-4 | Business registrations | - | - | ⏳ Next |
-| 52411-02-01-4 | Corporate insolvencies | - | - | ⏳ |
-| 82000-04-01-4 | Additional table | - | - | ⏳ |
+| 52311-01-04-4 | **Business registrations & deregistrations** | **1998-2024** | 3,024 | ✅ |
+| 52411-02-01-4 | **Corporate insolvencies** | **2007-2024** | 2,052 | ✅ |
+| 82000-04-01-4 | **Employee compensation by sector** | **2000-2022** | 10,488 | ✅ |
 
 ### 2. State Database NRW (Landesdatenbank)
 **URL:** https://www.landesdatenbank.nrw.de/  
@@ -305,7 +311,7 @@ Top 3 sectors across all Ruhr cities (2023):
 
 Every extraction MUST be verified to ensure:
 - ✅ Data accuracy and completeness
-- ✅ **Ruhr region cities coverage** (thesis research focus)
+- ✅ **Ruhr region cities coverage** (key reference points)
 - ✅ Time series analysis capability
 - ✅ Query performance
 
@@ -404,16 +410,16 @@ python scripts/diagnostics/check_extracted_data.py
 - Authentication configured
 - Data formats analyzed
 
-### Phase 3: Regional Database ETL 🟢 82% COMPLETE
+### Phase 3: Regional Database ETL ✅ 100% COMPLETE
 - [x] Demographics (population)
 - [x] Employment (8 tables)
 - [x] Unemployment
 - [x] Employed by sector
 - [x] **Construction industry (30 years)**
 - [x] **Establishments by size & sector**
-- [ ] Business registrations (NEXT)
-- [ ] Insolvencies
-- [ ] Additional table
+- [x] **Business registrations & deregistrations**
+- [x] **Corporate insolvencies**
+- [x] **Employee compensation by sector**
 
 ### Phase 4: State Database NRW ⏳ PENDING
 - 17 tables to extract
@@ -421,9 +427,9 @@ python scripts/diagnostics/check_extracted_data.py
 ### Phase 5: Federal Employment Agency ⏳ PENDING
 - 3 tables to extract
 
-### Phase 6: Analysis & Thesis Integration ⏳ PENDING
+### Phase 6: Analysis & Visualization ⏳ PENDING
 - Master analysis notebook
-- Thesis-ready visualizations
+- Advanced visualizations
 - Final documentation
 
 ---
@@ -432,7 +438,7 @@ python scripts/diagnostics/check_extracted_data.py
 
 **Project Lead:** Kanyuchi  
 **Organization:** Duisburg Business & Innovation (DBI)  
-**Focus:** Thesis research on Ruhr region industrial transformation
+**Focus:** Regional economic data infrastructure for NRW
 
 ---
 
@@ -449,4 +455,5 @@ python scripts/diagnostics/check_extracted_data.py
 | 1.0 | Dec 2024 | Initial project setup |
 | 2.0 | Dec 17, 2025 | 10 indicators completed, verification workflow |
 | 3.0 | Dec 18, 2025 | 14 indicators (82%), 30-year historical data, directory reorganization |
-| **3.1** | **Dec 19, 2025** | **File organization: clean directory structure** |
+| 3.1 | Dec 19, 2025 | File organization: clean directory structure |
+| **4.0** | **Dec 19, 2025** | **Regional Database Germany COMPLETE: 17/17 tables (100%), 27 indicators, 86,728 records** |
