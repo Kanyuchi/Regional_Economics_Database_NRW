@@ -14,12 +14,14 @@ config/.env
 *.pem
 secrets/
 
-# Database dumps and backups
-*.sql
+# Database dumps and backups (but NOT schema or query files)
 *.dump
 *.backup
 data/dumps/
 backups/
+# Exclude database dumps but allow schema and queries
+!sql/schema/*.sql
+!sql/queries/*.sql
 
 # ========================================
 # DATA FILES - TOO LARGE FOR GIT
