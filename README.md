@@ -337,6 +337,96 @@ python scripts/verification/verify_extraction_timeseries.py --indicator <ID> --e
 
 ---
 
+## Syncing a Forked Repository
+
+If you've forked this repository and want to keep it up-to-date with the original repository, follow these steps:
+
+### 1. Add the Original Repository as Upstream Remote
+
+```bash
+# Check current remotes
+git remote -v
+
+# Add the original repository as 'upstream'
+git remote add upstream https://github.com/Kanyuchi/Regional_Economics_Database_NRW.git
+
+# Verify upstream was added
+git remote -v
+```
+
+### 2. Fetch Latest Changes from Upstream
+
+```bash
+# Fetch all changes from the original repository
+git fetch upstream
+```
+
+### 3. Switch to Your Main Branch
+
+```bash
+# Make sure you're on your main branch
+git checkout main
+```
+
+### 4. Merge Upstream Changes
+
+**Option A: Merge (creates a merge commit)**
+```bash
+# Merge upstream/main into your main branch
+git merge upstream/main
+```
+
+**Option B: Rebase (cleaner history, no merge commit)**
+```bash
+# Rebase your changes on top of upstream/main
+git rebase upstream/main
+```
+
+### 5. Push Updated Fork to GitHub
+
+```bash
+# Push merged/rebased changes to your fork
+git push origin main
+
+# If you used rebase and already pushed before, you may need to force push
+# (Only do this if you're sure no one else is working on your fork)
+git push origin main --force-with-lease
+```
+
+### Complete Sync Workflow (One Command)
+
+You can also create a simple script or alias:
+
+```bash
+# Fetch and merge in one go
+git fetch upstream && git checkout main && git merge upstream/main && git push origin main
+```
+
+### Troubleshooting
+
+**If you have local changes:**
+```bash
+# Stash your changes first
+git stash
+
+# Sync with upstream
+git fetch upstream
+git merge upstream/main
+
+# Reapply your changes
+git stash pop
+```
+
+**If there are merge conflicts:**
+```bash
+# Git will show you which files have conflicts
+# Edit the conflicted files, then:
+git add <resolved-files>
+git commit -m "Resolve merge conflicts with upstream"
+```
+
+---
+
 ## Installation
 
 ### Prerequisites
