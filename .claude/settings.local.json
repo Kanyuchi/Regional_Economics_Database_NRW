@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__DBI_DATA__query"
+    ]
+  }
+}
