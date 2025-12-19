@@ -155,7 +155,7 @@ Regional Economics Database for NRW/
 │   └── queries/                         # Analysis SQL scripts
 │       ├── branches_by_sector_analysis.sql
 │       ├── branches_by_size_analysis.sql
-│       ├── business_registrations_thesis_analysis.sql
+│       ├── business_registrations_analysis.sql
 │       ├── business_registrations_verification.sql
 │       ├── construction_industry_analysis.sql
 │       ├── corporate_insolvencies_verification.sql
