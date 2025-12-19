@@ -444,7 +444,15 @@ python scripts/diagnostics/check_extracted_data.py
 
 ## License
 
-[To be determined]
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+**MIT License Summary:**
+- ✅ Free to use for commercial and non-commercial purposes
+- ✅ Permission to modify and distribute
+- ✅ Includes warranty disclaimer
+- ✅ Requires attribution and license notice
+
+For full license terms, see the LICENSE file in the root directory.
 
 ---
 
