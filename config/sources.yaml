@@ -1,0 +1,96 @@
+# Data Sources Configuration
+# Regional Economics Database for NRW
+
+data_sources:
+  # Regional Database Germany (Regionalstatistik)
+  regional_db:
+    name: "Regional Database Germany"
+    base_url: ${Regionalstatistik_base_url}
+    username: ${REGIONAL_DB_USERNAME}
+    password: ${REGIONAL_DB_PASSWORD}
+    timeout: 120
+    retry_attempts: 3
+    retry_delay: 5
+    rate_limit:
+      requests_per_minute: 30
+      requests_per_hour: 500
+    priority: 1
+
+  # State Database NRW (Landesdatenbank NRW)
+  state_db:
+    name: "State Database NRW"
+    base_url: ${LANDESDATENBANK_BASE_URL}
+    username: ${LANDESDATENBANK_USER}
+    password: ${LANDESDATENBANK_PASS}
+    timeout: 120
+    retry_attempts: 3
+    retry_delay: 5
+    rate_limit:
+      requests_per_minute: 30
+      requests_per_hour: 500
+    priority: 2
+
+  # Federal Employment Agency (Bundesagentur für Arbeit)
+  ba:
+    name: "Federal Employment Agency"
+    base_url: "https://statistik.arbeitsagentur.de/"
+    timeout: 180
+    retry_attempts: 5
+    retry_delay: 10
+    rate_limit:
+      requests_per_minute: 20
+      requests_per_hour: 300
+    priority: 3
+    notes: "May require manual download for some datasets"
+
+# Data extraction settings
+extraction:
+  batch_size: 100
+  parallel_requests: 3
+  save_raw_data: true
+  validate_on_extract: true
+
+# File formats
+formats:
+  preferred:
+    - csv
+    - xlsx
+    - json
+  fallback:
+    - html
+    - xml
+
+# Geographic scope
+geography:
+  regions:
+    - type: "district"
+      count: 53
+      description: "All NRW districts (31 rural + 22 urban)"
+    - type: "administrative_district"
+      count: 5
+      description: "NRW administrative districts"
+    - type: "state"
+      name: "North Rhine-Westphalia"
+      code: "05"
+    - type: "country"
+      name: "Germany"
+      code: "00"
+
+  special_aggregations:
+    - name: "Ruhr Area"
+      type: "custom_region"
+    - name: "Lower Rhine"
+      type: "custom_region"
+    - name: "Düsseldorf Administrative District"
+      type: "administrative_district"
+      code: "051"
+
+# Temporal scope
+temporal:
+  start_year: 1995
+  update_frequency: "monthly"
+  reference_dates:
+    - "year_end"  # December 31
+    - "mid_year"  # June 30
+    - "annual_avg"  # Calendar year average
+    - "annual_total"  # Calendar year total

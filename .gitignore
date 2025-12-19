@@ -1,0 +1,166 @@
+# Regional Economics Database for NRW - Git Ignore File
+
+# ========================================
+# SENSITIVE DATA - NEVER COMMIT
+# ========================================
+# Configuration files with credentials
+config/config.yaml
+config/config.yml
+config/.env
+.env
+.env.local
+.env.production
+*.key
+*.pem
+secrets/
+
+# Database dumps and backups
+*.sql
+*.dump
+*.backup
+data/dumps/
+backups/
+
+# ========================================
+# DATA FILES - TOO LARGE FOR GIT
+# ========================================
+# Raw data files
+data/raw/*.csv
+data/raw/*.json
+data/raw/*.xml
+data/processed/
+
+# Keep directory structure but not files
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# ========================================
+# LOGS AND TEMPORARY FILES
+# ========================================
+# Log files
+logs/*.log
+*.log
+log/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Cache and job files
+cache/
+*.cache
+data/cache/
+.job_cache/
+
+# ========================================
+# PYTHON
+# ========================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# PyCharm
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ========================================
+# DOCUMENTATION TEMPORARY FILES
+# ========================================
+# LaTeX
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.toc
+
+# ========================================
+# OPERATING SYSTEM
+# ========================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+
+# ========================================
+# PROJECT SPECIFIC
+# ========================================
+# Test outputs
+test_output/
+scratch/
+sandbox/
+
+# Archive files (keep old versions out of git)
+archive/*.md
+archive/*.log
+
+# Agent tools temporary files
+agent-tools/*.txt
+
+# Terminals folder (Cursor IDE temp files)
+terminals/
+
+# MCP cache
+mcps/
+
+# Research outputs (if they get too large)
+research_finder_results/*/*.json
+
+# ========================================
+# KEEP IMPORTANT STRUCTURE FILES
+# ========================================
+# Allow README files
+!README.md
+!*/README.md
+
+# Allow requirements and configs (but not secrets)
+!requirements.txt
+!config/config.template.yaml
+
+# Allow SQL schema files
+!sql/schema/*.sql
+
+# Allow documentation
+!docs/**/*.md
+
+# Allow reference data
+!data/reference/*.json
+!data/reference/*.csv

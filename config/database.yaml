@@ -1,0 +1,35 @@
+# Database Configuration
+# Regional Economics Database for NRW
+
+database:
+  # Primary database for Regional Economics
+  regional_economics:
+    host: ${PG_POSTGRES_HOST}
+    port: ${PG_POSTGRES_PORT}
+    database: Regional_Economics_Database_NRW
+    user: ${PG_POSTGRES_USER}
+    password: ${PG_POSTGRES_PASS}
+
+  # Connection pool settings
+  connection_pool:
+    min_size: 1
+    max_size: 10
+    timeout: 30
+
+  # SQLAlchemy settings
+  sqlalchemy:
+    echo: false  # Set to true for SQL query logging
+    pool_pre_ping: true
+    pool_recycle: 3600
+
+# Query timeouts (in seconds)
+timeouts:
+  default: 120
+  long_running: 600
+  extraction: 1800
+
+# Retry configuration
+retry:
+  max_attempts: 3
+  backoff_factor: 2
+  retry_on_timeout: true

@@ -1,0 +1,126 @@
+region_code,region_name,year,value,gender,nationality,age_group,notes
+05112,Duisburg,2019,15483.0000,total,total,,Total - all size classes
+05112,Duisburg,2019,1828.0000,total,total,,10 to <50 employees
+05112,Duisburg,2019,89.0000,total,total,,250+ employees
+05112,Duisburg,2019,492.0000,total,total,,50 to <250 employees
+05112,Duisburg,2019,13074.0000,total,total,,0 to <10 employees
+05112,Duisburg,2020,14829.0000,total,total,,Total - all size classes
+05112,Duisburg,2020,12462.0000,total,total,,0 to <10 employees
+05112,Duisburg,2020,1791.0000,total,total,,10 to <50 employees
+05112,Duisburg,2020,492.0000,total,total,,50 to <250 employees
+05112,Duisburg,2020,84.0000,total,total,,250+ employees
+05112,Duisburg,2021,489.0000,total,total,,50 to <250 employees
+05112,Duisburg,2021,14856.0000,total,total,,Total - all size classes
+05112,Duisburg,2021,12531.0000,total,total,,0 to <10 employees
+05112,Duisburg,2021,87.0000,total,total,,250+ employees
+05112,Duisburg,2021,1749.0000,total,total,,10 to <50 employees
+05112,Duisburg,2022,88.0000,total,total,,250+ employees
+05112,Duisburg,2022,12720.0000,total,total,,0 to <10 employees
+05112,Duisburg,2022,486.0000,total,total,,50 to <250 employees
+05112,Duisburg,2022,15117.0000,total,total,,Total - all size classes
+05112,Duisburg,2022,1823.0000,total,total,,10 to <50 employees
+05112,Duisburg,2023,1847.0000,total,total,,10 to <50 employees
+05112,Duisburg,2023,479.0000,total,total,,50 to <250 employees
+05112,Duisburg,2023,88.0000,total,total,,250+ employees
+05112,Duisburg,2023,15199.0000,total,total,,Total - all size classes
+05112,Duisburg,2023,12785.0000,total,total,,0 to <10 employees
+05113,Essen,2019,24083.0000,total,total,,Total - all size classes
+05113,Essen,2019,20484.0000,total,total,,0 to <10 employees
+05113,Essen,2019,2719.0000,total,total,,10 to <50 employees
+05113,Essen,2019,715.0000,total,total,,50 to <250 employees
+05113,Essen,2019,165.0000,total,total,,250+ employees
+05113,Essen,2020,171.0000,total,total,,250+ employees
+05113,Essen,2020,2662.0000,total,total,,10 to <50 employees
+05113,Essen,2020,22985.0000,total,total,,Total - all size classes
+05113,Essen,2020,679.0000,total,total,,50 to <250 employees
+05113,Essen,2020,19473.0000,total,total,,0 to <10 employees
+05113,Essen,2021,678.0000,total,total,,50 to <250 employees
+05113,Essen,2021,166.0000,total,total,,250+ employees
+05113,Essen,2021,22860.0000,total,total,,Total - all size classes
+05113,Essen,2021,2708.0000,total,total,,10 to <50 employees
+05113,Essen,2021,19308.0000,total,total,,0 to <10 employees
+05113,Essen,2022,683.0000,total,total,,50 to <250 employees
+05113,Essen,2022,19553.0000,total,total,,0 to <10 employees
+05113,Essen,2022,2744.0000,total,total,,10 to <50 employees
+05113,Essen,2022,175.0000,total,total,,250+ employees
+05113,Essen,2022,23155.0000,total,total,,Total - all size classes
+05113,Essen,2023,23356.0000,total,total,,Total - all size classes
+05113,Essen,2023,690.0000,total,total,,50 to <250 employees
+05113,Essen,2023,2808.0000,total,total,,10 to <50 employees
+05113,Essen,2023,178.0000,total,total,,250+ employees
+05113,Essen,2023,19680.0000,total,total,,0 to <10 employees
+05513,Münster,2019,235.0000,total,total,,50 to <250 employees
+05513,Münster,2019,7958.0000,total,total,,Total - all size classes
+05513,Münster,2019,6676.0000,total,total,,0 to <10 employees
+05513,Münster,2019,985.0000,total,total,,10 to <50 employees
+05513,Münster,2019,62.0000,total,total,,250+ employees
+05513,Münster,2020,62.0000,total,total,,250+ employees
+05513,Münster,2020,6351.0000,total,total,,0 to <10 employees
+05513,Münster,2020,7634.0000,total,total,,Total - all size classes
+05513,Münster,2020,233.0000,total,total,,50 to <250 employees
+05513,Münster,2020,988.0000,total,total,,10 to <50 employees
+05513,Münster,2021,235.0000,total,total,,50 to <250 employees
+05513,Münster,2021,7711.0000,total,total,,Total - all size classes
+05513,Münster,2021,58.0000,total,total,,250+ employees
+05513,Münster,2021,1013.0000,total,total,,10 to <50 employees
+05513,Münster,2021,6405.0000,total,total,,0 to <10 employees
+05513,Münster,2022,59.0000,total,total,,250+ employees
+05513,Münster,2022,7882.0000,total,total,,Total - all size classes
+05513,Münster,2022,1013.0000,total,total,,10 to <50 employees
+05513,Münster,2022,249.0000,total,total,,50 to <250 employees
+05513,Münster,2022,6561.0000,total,total,,0 to <10 employees
+05513,Münster,2023,1040.0000,total,total,,10 to <50 employees
+05513,Münster,2023,7989.0000,total,total,,Total - all size classes
+05513,Münster,2023,6645.0000,total,total,,0 to <10 employees
+05513,Münster,2023,245.0000,total,total,,50 to <250 employees
+05513,Münster,2023,59.0000,total,total,,250+ employees
+05911,Bochum,2019,400.0000,total,total,,50 to <250 employees
+05911,Bochum,2019,1668.0000,total,total,,10 to <50 employees
+05911,Bochum,2019,14071.0000,total,total,,Total - all size classes
+05911,Bochum,2019,82.0000,total,total,,250+ employees
+05911,Bochum,2019,11921.0000,total,total,,0 to <10 employees
+05911,Bochum,2020,79.0000,total,total,,250+ employees
+05911,Bochum,2020,13491.0000,total,total,,Total - all size classes
+05911,Bochum,2020,11345.0000,total,total,,0 to <10 employees
+05911,Bochum,2020,1668.0000,total,total,,10 to <50 employees
+05911,Bochum,2020,399.0000,total,total,,50 to <250 employees
+05911,Bochum,2021,1684.0000,total,total,,10 to <50 employees
+05911,Bochum,2021,78.0000,total,total,,250+ employees
+05911,Bochum,2021,13550.0000,total,total,,Total - all size classes
+05911,Bochum,2021,11387.0000,total,total,,0 to <10 employees
+05911,Bochum,2021,401.0000,total,total,,50 to <250 employees
+05911,Bochum,2022,11559.0000,total,total,,0 to <10 employees
+05911,Bochum,2022,13787.0000,total,total,,Total - all size classes
+05911,Bochum,2022,1736.0000,total,total,,10 to <50 employees
+05911,Bochum,2022,409.0000,total,total,,50 to <250 employees
+05911,Bochum,2022,83.0000,total,total,,250+ employees
+05911,Bochum,2023,13942.0000,total,total,,Total - all size classes
+05911,Bochum,2023,425.0000,total,total,,50 to <250 employees
+05911,Bochum,2023,81.0000,total,total,,250+ employees
+05911,Bochum,2023,11718.0000,total,total,,0 to <10 employees
+05911,Bochum,2023,1718.0000,total,total,,10 to <50 employees
+05913,Dortmund,2019,22713.0000,total,total,,Total - all size classes
+05913,Dortmund,2019,2859.0000,total,total,,10 to <50 employees
+05913,Dortmund,2019,19039.0000,total,total,,0 to <10 employees
+05913,Dortmund,2019,656.0000,total,total,,50 to <250 employees
+05913,Dortmund,2019,159.0000,total,total,,250+ employees
+05913,Dortmund,2020,18249.0000,total,total,,0 to <10 employees
+05913,Dortmund,2020,21889.0000,total,total,,Total - all size classes
+05913,Dortmund,2020,644.0000,total,total,,50 to <250 employees
+05913,Dortmund,2020,159.0000,total,total,,250+ employees
+05913,Dortmund,2020,2837.0000,total,total,,10 to <50 employees
+05913,Dortmund,2021,2824.0000,total,total,,10 to <50 employees
+05913,Dortmund,2021,21891.0000,total,total,,Total - all size classes
+05913,Dortmund,2021,18267.0000,total,total,,0 to <10 employees
+05913,Dortmund,2021,641.0000,total,total,,50 to <250 employees
+05913,Dortmund,2021,159.0000,total,total,,250+ employees
+05913,Dortmund,2022,22123.0000,total,total,,Total - all size classes
+05913,Dortmund,2022,18392.0000,total,total,,0 to <10 employees
+05913,Dortmund,2022,161.0000,total,total,,250+ employees
+05913,Dortmund,2022,2899.0000,total,total,,10 to <50 employees
+05913,Dortmund,2022,671.0000,total,total,,50 to <250 employees
+05913,Dortmund,2023,680.0000,total,total,,50 to <250 employees
+05913,Dortmund,2023,2868.0000,total,total,,10 to <50 employees
+05913,Dortmund,2023,22471.0000,total,total,,Total - all size classes
+05913,Dortmund,2023,18761.0000,total,total,,0 to <10 employees
+05913,Dortmund,2023,162.0000,total,total,,250+ employees
