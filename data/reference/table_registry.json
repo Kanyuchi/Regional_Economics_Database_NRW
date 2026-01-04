@@ -3,8 +3,8 @@
     "project": "Regional Economics Database for NRW",
     "description": "Registry of all data tables to be extracted, transformed, and loaded",
     "created_at": "2025-12-16",
-    "last_updated": "2025-12-18",
-    "notes": "2025-12-18: Fixed notes field bug in loader. Completed 14 of 17 Regional DB tables (82%). Recent additions: unemployment, employment by sector, construction industry (30 years), business establishments by size and sector (18 sectors)."
+    "last_updated": "2026-01-02",
+    "notes": "2026-01-02: REGIONAL DATABASE GERMANY 100% COMPLETE! All 17 tables extracted (99,242 records, 27 indicators). Completed: business registrations/deregistrations (1998-2024), corporate insolvencies (2007-2024), employee compensation (2000-2022). Ready to proceed with State Database NRW."
   },
   "sources": {
     "regional_db": {
@@ -221,40 +221,43 @@
         "table_id": "52311-01-04-4",
         "description": "Business registrations, deregistrations – Annual total",
         "category": "economic_activity",
-        "extractor_script": null,
-        "etl_script": null,
-        "transformer": null,
-        "status": "pending",
-        "available_period": null,
-        "records_loaded": 0,
-        "completed_at": null,
-        "notes": "Business dynamics (new/closed)"
+        "extractor_script": "src/extractors/regional_db/business_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_52311_01_04_4_business_registrations.py",
+        "transformer": "src/transformers/business_transformer.py",
+        "status": "completed",
+        "available_period": "1998-2024",
+        "records_loaded": 13223,
+        "completed_at": "2025-12-19",
+        "indicator_id": "24, 25",
+        "notes": "Business registrations (indicator 24: 6,611 records) and deregistrations (indicator 25: 6,612 records). 27 years of business dynamics data. VERIFIED."
       },
       {
         "table_id": "52411-02-01-4",
         "description": "Corporate insolvency applications filed – Annual total",
         "category": "economic_activity",
-        "extractor_script": null,
-        "etl_script": null,
-        "transformer": null,
-        "status": "pending",
-        "available_period": null,
-        "records_loaded": 0,
-        "completed_at": null,
-        "notes": "Insolvency data"
+        "extractor_script": "src/extractors/regional_db/business_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_52411_02_01_4_corporate_insolvencies.py",
+        "transformer": "src/transformers/business_transformer.py",
+        "status": "completed",
+        "available_period": "2007-2024",
+        "records_loaded": 2052,
+        "completed_at": "2025-12-19",
+        "indicator_id": 27,
+        "notes": "Corporate insolvency applications. 18 years of insolvency data for NRW districts. VERIFIED."
       },
       {
         "table_id": "82000-04-01-4",
-        "description": "Additional table (description not provided)",
-        "category": "other",
-        "extractor_script": null,
-        "etl_script": null,
-        "transformer": null,
-        "status": "pending",
-        "available_period": null,
-        "records_loaded": 0,
-        "completed_at": null,
-        "notes": "Need to check table content"
+        "description": "Employee compensation by economic sectors",
+        "category": "labor_market",
+        "extractor_script": "src/extractors/regional_db/employment_extractor.py",
+        "etl_script": "pipelines/regional_db/etl_82000_04_01_4_employee_compensation.py",
+        "transformer": "src/transformers/employment_transformer.py",
+        "status": "completed",
+        "available_period": "2000-2022",
+        "records_loaded": 10488,
+        "completed_at": "2025-12-19",
+        "indicator_id": 26,
+        "notes": "Employee compensation by economic sectors. 23 years of compensation data across sectors. VERIFIED."
       }
     ],
     "state_db": [
@@ -385,11 +388,11 @@
   },
   "summary": {
     "total_tables": 37,
-    "completed": 14,
+    "completed": 17,
     "in_progress": 0,
-    "pending": 23,
+    "pending": 20,
     "by_source": {
-      "regional_db": {"total": 17, "completed": 14, "pending": 3},
+      "regional_db": {"total": 17, "completed": 17, "pending": 0},
       "state_db": {"total": 17, "completed": 0, "pending": 17},
       "ba": {"total": 3, "completed": 0, "pending": 3}
     },
@@ -403,12 +406,12 @@
       "mobility": 2
     },
     "database_statistics": {
-      "total_records": 73080,
-      "indicators_defined": 23,
-      "indicators_with_data": 14,
+      "total_records": 99242,
+      "indicators_defined": 27,
+      "indicators_with_data": 18,
       "years_covered": "1995-2024",
       "regions": 58,
-      "last_extraction": "2025-12-18"
+      "last_extraction": "2026-01-02"
     }
   }
 }

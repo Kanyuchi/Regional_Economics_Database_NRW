@@ -166,3 +166,22 @@ research_finder_results/*/*.json
 # Allow reference data
 !data/reference/*.json
 !data/reference/*.csv
+
+# ========================================
+# LARGE DATA DIRECTORIES - EXCLUDE FROM GIT
+# ========================================
+# Raw source data files (too large for Git)
+Commuters/
+arbeitsagentur.de/
+data/raw/
+
+# ML model experiments
+model_compression_techniques/
+
+# Node modules
+**/node_modules/
+**/package-lock.json
+
+# Build outputs
+**/dist/
+**/build/
