@@ -11,7 +11,7 @@ const BarChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) =
     d3.select(svgRef.current).selectAll('*').remove();
 
     // Set dimensions
-    const margin = { top: 40, right: 30, bottom: 80, left: 70 };
+    const margin = { top: 40, right: 30, bottom: 120, left: 70 };
     const width = 800 - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 
@@ -42,6 +42,8 @@ const BarChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) =
       .call(d3.axisBottom(x))
       .selectAll('text')
       .attr('transform', 'rotate(-45)')
+      .attr('dx', '-0.8em')
+      .attr('dy', '0.15em')
       .style('text-anchor', 'end')
       .style('font-size', '12px');
 
@@ -53,7 +55,7 @@ const BarChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) =
       .append('text')
       .attr('text-anchor', 'middle')
       .attr('x', width / 2)
-      .attr('y', height + margin.bottom - 10)
+      .attr('y', height + margin.bottom - 20)
       .style('font-size', '14px')
       .text(xLabel);
 
