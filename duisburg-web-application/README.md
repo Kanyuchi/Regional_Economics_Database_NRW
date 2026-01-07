@@ -10,6 +10,7 @@ A comprehensive dashboard for visualizing regional economic data for Duisburg an
 - **Trends Tab**: Historical time series data with D3.js line charts
 - **Interactive Visualizations**: Bar charts and line charts with tooltips
 - **City Comparison**: Compare Duisburg with Düsseldorf, Essen, Oberhausen, Mülheim an der Ruhr
+- **Chat Assistant**: Docked chat drawer with minimize/reset; slides the dashboard left to keep tabs visible; supports table responses and chart-aware answers.
 
 ## Technology Stack
 
@@ -61,6 +62,8 @@ The dashboard connects to the `regional_db` PostgreSQL database containing:
    DB_USER=fadzie
    DB_PASSWORD=
    PORT=3001
+   OPENAI_API_KEY= # optional, required for LLM chatbot
+   OPENAI_MODEL=gpt-4o-mini
    ```
 
 4. Start the backend server:
@@ -94,6 +97,52 @@ The dashboard connects to the `regional_db` PostgreSQL database containing:
 
    The dashboard will be available at `http://localhost:5173`
 
+### Frontend Build for Production
+
+1. Set the API base (optional; defaults to current origin):
+   ```bash
+   export VITE_API_BASE=https://your-backend.example.com
+   ```
+2. Build:
+   ```bash
+   npm run build
+   ```
+   Deploy `frontend/dist` to your static host (Vercel/Netlify/Cloudflare Pages) or serve via Nginx/your backend. Ensure CORS if frontend/backends are on different origins.
+
+### Docker Deploy (Backend)
+1. Build:
+   ```bash
+   cd duisburg-web-application/backend
+   docker build -t duisburg-backend .
+   ```
+2. Run (envs required):
+   ```bash
+   docker run -p 3001:3001 \
+     -e DB_HOST=... -e DB_PORT=5432 -e DB_NAME=regional_db \
+     -e DB_USER=... -e DB_PASSWORD=... -e PORT=3001 \
+     duisburg-backend
+   ```
+
+### Nginx + Static Frontend + API Proxy
+- Build frontend (`npm run build` in `frontend`) and place `dist/` in `/usr/share/nginx/html`.
+- Use `deploy/nginx.conf` as a template to proxy `/api` to the backend and serve the SPA with fallback to `index.html`.
+- Adjust `backend_api` upstream to your backend host:port.
+
+### Docker Compose (Backend + Frontend)
+- Prereq: Docker/Compose installed.
+- From `duisburg-web-application/`:
+  ```bash
+  docker-compose up --build
+  ```
+  - Backend available at `http://localhost:3001`
+  - Frontend at `http://localhost:8080` (proxies `/api` to backend)
+- Frontend build arg in compose defaults `VITE_API_BASE=http://backend:3001`.
+- Backend envs pulled from `backend/.env`; ensure they’re set before running compose.
+
+### Hosting Suggestions
+- Backend: Render/Railway/Fly/DigitalOcean App Platform with envs for DB and PORT.
+- Frontend: Vercel/Netlify/Cloudflare Pages (static) or Nginx serving `dist/` with `/api` proxy.
+
 ## Running the Dashboard
 
 1. **Start Backend** (Terminal 1):
@@ -110,6 +159,17 @@ The dashboard connects to the `regional_db` PostgreSQL database containing:
 
 3. Open your browser to `http://localhost:5173`
 
+## AI Chatbot (Optional)
+
+The chatbot now mixes deterministic data answers with LLM phrasing:
+
+1. Set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) in `backend/.env`.
+2. Restart the backend (`npm start` or `npm run dev`).
+3. The frontend chat widget uses:
+   - Deterministic, DB-backed responses for business registrations/deregistrations, unemployment counts, and general indicator time series (e.g., “doctors in Duisburg 2019-2024”), returned with tables.
+   - Chart-aware context: current tab/indicator/year/chart type/view mode/selected city and recent chart data are sent to the backend so the bot can describe what you’re viewing.
+   - LLM fallback only when no deterministic path matches; the model is instructed not to invent numbers.
+
 ## API Endpoints
 
 - `GET /api/health` - Health check
@@ -122,6 +182,11 @@ The dashboard connects to the `regional_db` PostgreSQL database containing:
 - `GET /api/timeseries/:indicatorCode` - Time series data for an indicator
 - `GET /api/indicators` - Get all available indicators
 - `GET /api/years` - Get all available years
+- `POST /api/chat` - Chat assistant (deterministic responses + LLM fallback)
+
+## MCP (Postgres) setup
+
+If you want the database accessible to Claude Code/Perplexity via MCP, use the custom server under `backend/mcp/postgres-server.js` (see `mcp/postgres-mcp.md`). It reads `backend/.env`, exposes the public schema, and supports read/write by default. Set `MCP_PORT` (or `PORT`) to avoid conflicts with the API port (e.g., `MCP_PORT=4545 npm run mcp`).
 
 ## Dashboard Features
 

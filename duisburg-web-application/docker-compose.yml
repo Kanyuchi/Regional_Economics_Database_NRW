@@ -1,0 +1,20 @@
+services:
+  backend:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=3001
+      - HOST=0.0.0.0
+    ports:
+      - "3001:3001"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_BASE=http://backend:3001
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"

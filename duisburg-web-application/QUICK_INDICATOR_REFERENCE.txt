@@ -1,0 +1,165 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║           DUISBURG DASHBOARD - INDICATOR YEAR COVERAGE GUIDE                  ║
+║                        Quick Reference for Users                              ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+📊 DASHBOARD ACCESS: http://localhost:5173
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🟢 EXCELLENT COVERAGE (20+ years) - RECOMMENDED FOR LONG-TERM TRENDS
+═══════════════════════════════════════════════════════════════════════════════
+
+GDP/ECONOMIC INDICATORS (1991-2023) - 33 YEARS
+  • BIP zu Marktpreisen
+  • BIP je Erwerbstaetigen
+  • Bruttowertschoepfung gesamt
+  • BWS Dienstleistungsbereiche (G-U)
+  • BWS Produzierendes Gewerbe gesamt (B-E)
+
+INFRASTRUCTURE (1996-2024) - 29 YEARS
+  • Autobahnen
+  • Bundesstraßen
+  • Landstraßen
+  • Kreisstraßen
+  • Straßen insgesamt
+
+BUSINESS ECONOMY (1995-2024) - 30 YEARS
+  • Betriebe, Beschaeftigte, Gesamtumsatz
+  • Betriebe, Umsatz Bauhauptgewerbe
+  • Business registrations/deregistrations (1998-2024)
+
+EMPLOYEE COMPENSATION (2000-2023) - 24 YEARS
+  • Arbeitnehmerentgelt insgesamt
+  • By sector: Baugewerbe, Dienstleistungen, Handel, etc.
+  ⭐ All 11 compensation indicators have consistent 24-year coverage
+
+LABOR MARKET - GENERAL (2000-2024) - 24 YEARS
+  • Arbeitslose und Arbeitslosenquoten (2001-2024)
+  • Erwerbstaetige nach Wirtschaftszweigen (2000-2023)
+  • Beschaeftigte am Wohnort (2008-2024)
+  • Beschaeftigte nach Berufsausbildung (2008-2024)
+
+COMMUTER DATA (2002-2024) - 22 YEARS
+  • Auspendler (Outgoing Commuters) - 2002-2024
+  • Einpendler (Incoming Commuters) - 2002-2023
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🟡 MODERATE COVERAGE (10-20 years)
+═══════════════════════════════════════════════════════════════════════════════
+
+DEMOGRAPHICS - CORE (2011-2024) - 14 YEARS
+  • Bevölkerung insgesamt
+  • Sozialversicherungspflichtig Beschäftigte insgesamt
+
+DEMOGRAPHICS - DETAILED (1997-2019) - 23 YEARS
+  • Bevölkerung nach Erwerbsstatus, Staatsangehörigkeit (1997-2019)
+  • Bevölkerung nach Nettoeinkommen (2005-2019)
+
+PUBLIC FINANCE
+  • Municipal Finances (GFK) - 2009-2024 (16 years)
+  • Income tax indicators - 1998-2021 (15 years)
+
+HEALTH - HOSPITALS (2002-2024) - 23 YEARS
+  • Anzahl der Krankenhäuser
+  • Aufgestellte Betten in Krankenhäusern
+  • Hauptamtliche Ärzte - 2005-2024 (20 years)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🔴 LIMITED COVERAGE (4-5 years) - ⚠️ USE WITH CAUTION
+═══════════════════════════════════════════════════════════════════════════════
+
+HEALTH/CARE SERVICES (2017-2023) - ONLY 4 YEARS! ⚠️
+  • Ambulante Pflegedienste
+  • Pflegeheime
+  • Personal in Pflegeheimen
+  • Leistungsempfänger nach Pflegegrad
+  • Pflegebedürftige (all types)
+  • Verfügbare Plätze in Pflegeheimen
+  
+  ⚠️ DO NOT select years before 2017 or after 2023!
+
+LABOR MARKET - BA WAGE DATA (2020-2024) - ONLY 5 YEARS! ⚠️
+  • Median des monatlichen Bruttoarbeitsentgelts
+  • Medianentgelt nach Berufen
+  • Medianentgelt nach Wirtschaftszweigen
+  • Entgeltverteilung nach Berufen
+  • Entgeltverteilung nach Wirtschaftszweigen
+  • Vollzeitbeschäftigte nach Berufen
+  • Beschäftigte im unteren Entgeltbereich
+  
+  ⚠️ DO NOT select years before 2020!
+
+DEMOGRAPHICS - MIGRATION (2016-2019) - ONLY 4 YEARS! ⚠️
+  • Bevölkerung nach Migrationshintergrund
+  
+  ⚠️ Only 2016-2019 available!
+
+═══════════════════════════════════════════════════════════════════════════════
+
+💡 TIPS FOR BEST RESULTS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. TRENDS TAB (Time Series):
+   ✅ The year dropdown now AUTOMATICALLY FILTERS based on selected indicator
+   ✅ Indicator dropdown SHOWS YEAR RANGE: "Indicator Name (2020-2024)"
+   ✅ System AUTO-SELECTS valid year when you change indicators
+   
+2. RECOMMENDED YEARS FOR EACH CATEGORY:
+   • Economics/GDP: Any year 1991-2023
+   • Infrastructure: Any year 1996-2024
+   • Demographics (core): 2011-2024 works best
+   • Labor Market (BA data): 2020-2024 ONLY
+   • Health (hospitals): 2002-2024
+   • Health (care/nursing): 2017-2023 ONLY
+
+3. FOR LONG-TERM COMPARISONS (20+ years):
+   Choose GDP, Infrastructure, or Business Economy indicators
+
+4. FOR RECENT DETAILED ANALYSIS (last 5 years):
+   Use BA wage data, care services, or median income indicators
+
+5. SWEET SPOT YEAR FOR MOST DATA:
+   📌 YEAR 2019 - Has 833 records across all 5 cities
+   📌 YEAR 2023 - Most recent with 411 records
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🎯 EXAMPLE WORKFLOWS
+═══════════════════════════════════════════════════════════════════════════════
+
+SCENARIO 1: "I want to compare Duisburg's economy over 30 years"
+  → Go to Trends tab
+  → Select: "BIP zu Marktpreisen (1991-2023)"
+  → Years 1991-2023 will be available
+  → Chart shows full 33-year trend
+
+SCENARIO 2: "I want to see recent wage data"
+  → Go to Trends tab
+  → Select: "Median des monatlichen Bruttoarbeitsentgelts (2020-2024)"
+  → Only years 2020-2024 will show in dropdown
+  → Cannot accidentally select invalid year
+
+SCENARIO 3: "I want population trends"
+  → Go to Trends tab
+  → Select: "Bevölkerung insgesamt (2011-2024)"
+  → 14 years of data available
+  → For longer history, use "Bevölkerung nach Altersgruppen (1975-2024)"
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📋 QUICK STATS
+═══════════════════════════════════════════════════════════════════════════════
+
+Total Indicators:            84
+Excellent Coverage (20+):    45 indicators (54%)
+Moderate Coverage (10-20):   15 indicators (18%)
+Limited Coverage (<10):      24 indicators (29%)
+
+Database Total:              498,333 records
+Years with Data:             1975-2024 (50 years)
+Comparison Cities:           5 (Duisburg, Düsseldorf, Essen, Oberhausen, Mülheim)
+
+═══════════════════════════════════════════════════════════════════════════════
