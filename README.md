@@ -25,7 +25,7 @@ This project demonstrates end-to-end data engineering capabilities including API
 
 ### Key Achievements
 
-- ✅ **498,333 records** across 89 economic indicators with data (103 defined)
+- ✅ **1 498,333 records** across 120 economic indicators with data (103 defined)
 - ✅ **50 years** of historical data (1975-2024)
 - ✅ **54 NRW districts** with comprehensive coverage
 - ✅ **3 major data sources**: Regional DB (100%), State DB (100%), BA (100%)
