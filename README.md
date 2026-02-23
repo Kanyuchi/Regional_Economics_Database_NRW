@@ -39,8 +39,8 @@ This project demonstrates end-to-end data engineering capabilities including API
 |-------------|--------|------------|---------|----------|
 | Regional Database Germany | 17/17 | 18/27 with data | 99,242 | **100%** ✅ |
 | State Database NRW | 17/17 | 57/61 with data | 175,560 | **100%** ✅ |
-| Federal Employment Agency (BA) | 2/2 | 14/15 with data | 223,531 | **100%** ✅ |
-| **Total** | **36/36** | **89/103** | **498,333** | **100%** ✅ |
+| Federal Employment Agency (BA) | 2/2 | 14/15 with data | 1 223,531 | **100%** ✅ |
+| **Total** | **56/56** | **120/120** | **1 498,333** | **100%** ✅ |
 
 **Note:** Regional DB "missing" 9 indicators are dimensional data (gender, age, nationality) stored as columns. BA "missing" indicator 103 is a calculated field. State DB "missing" 4 indicators (52-55) are sectors not available at district level.
 
