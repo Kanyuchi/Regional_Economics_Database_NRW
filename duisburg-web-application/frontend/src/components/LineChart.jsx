@@ -1,9 +1,17 @@
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { DEFAULT_SERIES_COLORS } from '../constants/cityColors';
+import ChartToolbar from './ChartToolbar';
+import {
+  downloadCsvRows,
+  downloadPngFromSvg,
+  downloadSvgElement,
+  sanitizeFilename,
+} from '../utils/exportUtils';
 
 const LineChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg', colorMap = null }) => {
   const svgRef = useRef();
+  const filenameBase = sanitizeFilename(title || 'line-chart');
 
   useEffect(() => {
     if (!data || data.length === 0) return;
@@ -154,7 +162,25 @@ const LineChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg', co
 
   }, [data, title, xLabel, yLabel, highlightCity, colorMap]);
 
-  return <svg ref={svgRef}></svg>;
+  return (
+    <div className="chart-figure">
+      <ChartToolbar
+        onDownloadPng={() => downloadPngFromSvg(svgRef.current, filenameBase)}
+        onDownloadSvg={() => downloadSvgElement(svgRef.current, filenameBase)}
+        onDownloadCsv={() =>
+          downloadCsvRows(
+            (data || []).map((row) => ({
+              city: row.city,
+              year: row.year,
+              value: row.value,
+            })),
+            filenameBase
+          )
+        }
+      />
+      <svg ref={svgRef}></svg>
+    </div>
+  );
 };
 
 export default LineChart;

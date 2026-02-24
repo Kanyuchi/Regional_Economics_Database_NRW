@@ -1,9 +1,17 @@
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { DEFAULT_SERIES_COLORS } from '../constants/cityColors';
+import ChartToolbar from './ChartToolbar';
+import {
+  downloadCsvRows,
+  downloadPngFromSvg,
+  downloadSvgElement,
+  sanitizeFilename,
+} from '../utils/exportUtils';
 
 const AreaChart = ({ data, title, xLabel = 'X Axis', yLabel = 'Y Axis', highlightCity = null, colorMap = null }) => {
   const svgRef = useRef();
+  const filenameBase = sanitizeFilename(title || 'area-chart');
 
   useEffect(() => {
     if (!data || data.length === 0) return;
@@ -163,7 +171,21 @@ const AreaChart = ({ data, title, xLabel = 'X Axis', yLabel = 'Y Axis', highligh
   }, [data, title, xLabel, yLabel, highlightCity, colorMap]);
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div className="chart-figure" style={{ overflowX: 'auto' }}>
+      <ChartToolbar
+        onDownloadPng={() => downloadPngFromSvg(svgRef.current, filenameBase)}
+        onDownloadSvg={() => downloadSvgElement(svgRef.current, filenameBase)}
+        onDownloadCsv={() =>
+          downloadCsvRows(
+            (data || []).map((row) => ({
+              city: row.city,
+              year: row.year,
+              value: row.value,
+            })),
+            filenameBase
+          )
+        }
+      />
       <svg ref={svgRef}></svg>
     </div>
   );

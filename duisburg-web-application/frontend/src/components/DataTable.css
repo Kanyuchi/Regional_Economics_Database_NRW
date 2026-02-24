@@ -10,8 +10,16 @@
   font-size: 1.25rem;
   font-weight: 700;
   color: #1e293b;
-  margin-bottom: 1.5rem;
-  text-align: center;
+  margin-bottom: 0;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 
 .table-wrapper {

@@ -3,6 +3,8 @@ import apiService from './services/api';
 import BarChart from './components/BarChart';
 import LineChart from './components/LineChart';
 import AreaChart from './components/AreaChart';
+import HorizontalBarChart from './components/HorizontalBarChart';
+import ScatterChart from './components/ScatterChart';
 import DataTable from './components/DataTable';
 import Chatbot from './components/Chatbot';
 import { CITY_COLOR_MAP } from './constants/cityColors';
@@ -15,6 +17,38 @@ const OVERVIEW_KPI_CONFIG = [
   { code: 'ba_median_wage', label: 'Median Wage', rankLabel: 'highest median wage' },
 ];
 const PER_CAPITA_BASE = 1000;
+const SAVED_VIEWS_STORAGE_KEY = 'duisburg_dashboard_saved_views_v1';
+const VALID_TABS = new Set(['overview', 'demographics', 'labor', 'business', 'finance', 'trends']);
+const VALID_VIEW_MODES = new Set(['cities', 'categories']);
+const VALID_CHART_TYPES = new Set(['line', 'area', 'bar', 'horizontal', 'scatter', 'table']);
+
+function parseInitialUrlState() {
+  if (typeof window === 'undefined') return {};
+  const params = new URLSearchParams(window.location.search);
+  const yearParam = Number.parseInt(params.get('year') || '', 10);
+  const tabParam = params.get('tab');
+  const modeParam = params.get('mode');
+  const chartParam = params.get('chart');
+  const citiesParam = params
+    .get('cities')
+    ?.split(',')
+    .map((city) => city.trim())
+    .filter(Boolean);
+
+  return {
+    selectedYear: Number.isFinite(yearParam) ? yearParam : undefined,
+    activeTab: tabParam && VALID_TABS.has(tabParam) ? tabParam : undefined,
+    viewMode: modeParam && VALID_VIEW_MODES.has(modeParam) ? modeParam : undefined,
+    chartType: chartParam && VALID_CHART_TYPES.has(chartParam) ? chartParam : undefined,
+    selectedIndicator: params.get('indicator') || undefined,
+    selectedCity: params.get('city') || undefined,
+    indicatorSearch: params.get('search') || '',
+    selectedCities: citiesParam?.length ? citiesParam : undefined,
+    normalizePerCapita:
+      params.get('perCapita') === '1' || params.get('perCapita') === 'true',
+    scatterMetric: params.get('scatterMetric') || undefined,
+  };
+}
 
 function MiniSparkline({ data, color = '#2563eb' }) {
   const points = Array.isArray(data) ? data : [];
@@ -45,30 +79,37 @@ function MiniSparkline({ data, color = '#2563eb' }) {
 }
 
 function App() {
+  const [initialUrlState] = useState(() => parseInitialUrlState());
   const [duisburgInfo, setDuisburgInfo] = useState(null);
   const [cities, setCities] = useState([]);
-  const [selectedYear, setSelectedYear] = useState(2023);
+  const [selectedYear, setSelectedYear] = useState(initialUrlState.selectedYear ?? 2023);
   const [availableYears, setAvailableYears] = useState([]);
   const [indicators, setIndicators] = useState([]);
   const [indicatorMetadata, setIndicatorMetadata] = useState({});
-  const [selectedIndicator, setSelectedIndicator] = useState(null);
+  const [selectedIndicator, setSelectedIndicator] = useState(initialUrlState.selectedIndicator ?? null);
   const [demographicsData, setDemographicsData] = useState([]);
   const [laborMarketData, setLaborMarketData] = useState([]);
   const [businessEconomyData, setBusinessEconomyData] = useState([]);
   const [publicFinanceData, setPublicFinanceData] = useState([]);
   const [timeSeriesData, setTimeSeriesData] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
+  const [scatterMetricSeries, setScatterMetricSeries] = useState([]);
   const [overviewSeries, setOverviewSeries] = useState({});
   const [overviewLoading, setOverviewLoading] = useState(false);
-  const [viewMode, setViewMode] = useState('cities'); // 'cities' or 'categories'
-  const [selectedCity, setSelectedCity] = useState('Duisburg');
-  const [selectedCities, setSelectedCities] = useState([]);
-  const [indicatorSearch, setIndicatorSearch] = useState('');
-  const [chartType, setChartType] = useState('line'); // 'line', 'area', 'bar', 'table'
-  const [normalizePerCapita, setNormalizePerCapita] = useState(false);
+  const [viewMode, setViewMode] = useState(initialUrlState.viewMode ?? 'cities'); // 'cities' or 'categories'
+  const [selectedCity, setSelectedCity] = useState(initialUrlState.selectedCity ?? 'Duisburg');
+  const [selectedCities, setSelectedCities] = useState(initialUrlState.selectedCities ?? []);
+  const [indicatorSearch, setIndicatorSearch] = useState(initialUrlState.indicatorSearch ?? '');
+  const [chartType, setChartType] = useState(initialUrlState.chartType ?? 'line'); // 'line', 'area', 'bar', 'horizontal', 'scatter', 'table'
+  const [scatterMetric, setScatterMetric] = useState(initialUrlState.scatterMetric ?? 'pop_total');
+  const [normalizePerCapita, setNormalizePerCapita] = useState(initialUrlState.normalizePerCapita ?? false);
+  const [savedViews, setSavedViews] = useState([]);
+  const [savedViewSelection, setSavedViewSelection] = useState('');
+  const [viewName, setViewName] = useState('');
+  const [shareMessage, setShareMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(initialUrlState.activeTab ?? 'overview');
 
   useEffect(() => {
     loadInitialData();
@@ -96,6 +137,86 @@ function App() {
     }
   }, [indicatorMetadata]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(SAVED_VIEWS_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setSavedViews(parsed);
+      }
+    } catch (err) {
+      console.error('Error loading saved views:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(SAVED_VIEWS_STORAGE_KEY, JSON.stringify(savedViews));
+    } catch (err) {
+      console.error('Error persisting saved views:', err);
+    }
+  }, [savedViews]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams();
+    params.set('tab', activeTab);
+    params.set('year', String(selectedYear));
+    params.set('mode', viewMode);
+    params.set('chart', chartType);
+    if (selectedIndicator) params.set('indicator', selectedIndicator);
+    if (selectedCity) params.set('city', selectedCity);
+    if (indicatorSearch.trim()) params.set('search', indicatorSearch.trim());
+    if (selectedCities.length > 0) params.set('cities', selectedCities.join(','));
+    if (normalizePerCapita) params.set('perCapita', '1');
+    if (scatterMetric) params.set('scatterMetric', scatterMetric);
+    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+  }, [
+    activeTab,
+    selectedYear,
+    viewMode,
+    chartType,
+    selectedIndicator,
+    selectedCity,
+    indicatorSearch,
+    selectedCities,
+    normalizePerCapita,
+    scatterMetric,
+  ]);
+
+  useEffect(() => {
+    if (viewMode === 'categories' && chartType === 'scatter') {
+      setChartType('line');
+    }
+  }, [viewMode, chartType]);
+
+  useEffect(() => {
+    if (!scatterMetric && indicators.length > 0) {
+      setScatterMetric(indicators[0].indicator_code);
+    }
+  }, [scatterMetric, indicators]);
+
+  useEffect(() => {
+    if (
+      activeTab === 'trends' &&
+      viewMode === 'cities' &&
+      chartType === 'scatter' &&
+      scatterMetric &&
+      Object.keys(indicatorMetadata).length > 0
+    ) {
+      loadScatterMetricData(scatterMetric);
+    }
+  }, [activeTab, viewMode, chartType, scatterMetric, indicatorMetadata]);
+
+  useEffect(() => {
+    if (!shareMessage) return undefined;
+    const timer = setTimeout(() => setShareMessage(''), 2400);
+    return () => clearTimeout(timer);
+  }, [shareMessage]);
+
   const loadInitialData = async () => {
     try {
       setLoading(true);
@@ -109,7 +230,12 @@ function App() {
 
       setDuisburgInfo(duisburgRes.data);
       setCities(citiesRes.data);
-      setSelectedCities(citiesRes.data.map((city) => city.region_name));
+      const cityNames = citiesRes.data.map((city) => city.region_name);
+      setSelectedCities((prev) => {
+        const validSelection = prev.filter((city) => cityNames.includes(city));
+        return validSelection.length > 0 ? validSelection : cityNames;
+      });
+      setSelectedCity((prev) => (cityNames.includes(prev) ? prev : 'Duisburg'));
       setAvailableYears(yearsRes.data);
       const visibleIndicators = indicatorsRes.data.filter(
         (ind) => ind.indicator_code !== 'unemployment_rate'
@@ -133,10 +259,17 @@ function App() {
         visibleIndicators.find((ind) => ind.indicator_name.toLowerCase().includes('arbeitslosenquote')) ||
         visibleIndicators.find((ind) => ind.indicator_code === 'unemployment_persons') ||
         visibleIndicators.find((ind) => ind.indicator_code === 'unemployment_rate');
-      if (unemploymentIndicator) {
-        setSelectedIndicator(unemploymentIndicator.indicator_code);
-        // Auto-select a valid year for this indicator
-        const metadata = metadataMap[unemploymentIndicator.indicator_code];
+      const isCurrentIndicatorValid =
+        selectedIndicator &&
+        visibleIndicators.some((ind) => ind.indicator_code === selectedIndicator);
+      const indicatorToUse =
+        (isCurrentIndicatorValid && selectedIndicator) ||
+        unemploymentIndicator?.indicator_code ||
+        visibleIndicators[0]?.indicator_code;
+      if (indicatorToUse) {
+        setSelectedIndicator(indicatorToUse);
+        // Auto-select a valid year for the active indicator
+        const metadata = metadataMap[indicatorToUse];
         if (metadata && (selectedYear < metadata.min_year || selectedYear > metadata.max_year)) {
           setSelectedYear(metadata.max_year);
         }
@@ -204,6 +337,25 @@ function App() {
       setCategoryData(res.data);
     } catch (err) {
       console.error('Error loading category data:', err);
+    }
+  };
+
+  const loadScatterMetricData = async (indicatorCode) => {
+    try {
+      if (!indicatorCode) return;
+      const metadata = indicatorMetadata[indicatorCode];
+      if (!metadata) {
+        setScatterMetricSeries([]);
+        return;
+      }
+      const res = await apiService.getTimeSeries(indicatorCode, {
+        startYear: metadata.min_year,
+        endYear: metadata.max_year,
+      });
+      setScatterMetricSeries(res.data);
+    } catch (err) {
+      console.error('Error loading scatter metric data:', err);
+      setScatterMetricSeries([]);
     }
   };
 
@@ -279,6 +431,30 @@ function App() {
     })).filter((d) => d.city && Number.isFinite(d.year) && Number.isFinite(d.value));
   };
 
+  const buildLatestPointMap = (dataPoints, targetYear) => {
+    const grouped = new Map();
+    dataPoints.forEach((point) => {
+      if (!grouped.has(point.city)) grouped.set(point.city, []);
+      grouped.get(point.city).push(point);
+    });
+
+    const result = new Map();
+    grouped.forEach((rows, city) => {
+      const sorted = [...rows].sort((a, b) => a.year - b.year);
+      const exact = sorted.find((row) => row.year === targetYear);
+      if (exact) {
+        result.set(city, exact);
+        return;
+      }
+      const fallback = sorted.filter((row) => row.year <= targetYear).at(-1) || sorted.at(-1);
+      if (fallback) {
+        result.set(city, fallback);
+      }
+    });
+
+    return result;
+  };
+
   const toggleSelectedCity = (cityName) => {
     setSelectedCities((prev) => {
       if (prev.includes(cityName)) {
@@ -287,6 +463,97 @@ function App() {
       }
       return [...prev, cityName];
     });
+  };
+
+  const buildCurrentViewState = () => ({
+    activeTab,
+    selectedYear,
+    selectedIndicator,
+    viewMode,
+    selectedCity,
+    selectedCities,
+    indicatorSearch,
+    chartType,
+    normalizePerCapita,
+    scatterMetric,
+  });
+
+  const applyViewState = (state) => {
+    if (!state || typeof state !== 'object') return;
+    if (state.activeTab && VALID_TABS.has(state.activeTab)) setActiveTab(state.activeTab);
+    if (Number.isFinite(Number.parseInt(state.selectedYear, 10))) {
+      setSelectedYear(Number.parseInt(state.selectedYear, 10));
+    }
+    if (state.selectedIndicator) setSelectedIndicator(state.selectedIndicator);
+    if (state.viewMode && VALID_VIEW_MODES.has(state.viewMode)) setViewMode(state.viewMode);
+    if (state.selectedCity) setSelectedCity(state.selectedCity);
+    if (Array.isArray(state.selectedCities) && state.selectedCities.length > 0) {
+      setSelectedCities(state.selectedCities);
+    }
+    if (typeof state.indicatorSearch === 'string') setIndicatorSearch(state.indicatorSearch);
+    if (state.chartType && VALID_CHART_TYPES.has(state.chartType)) setChartType(state.chartType);
+    if (typeof state.normalizePerCapita === 'boolean') setNormalizePerCapita(state.normalizePerCapita);
+    if (state.scatterMetric) setScatterMetric(state.scatterMetric);
+  };
+
+  const handleSaveView = () => {
+    const now = new Date();
+    const trimmed = viewName.trim();
+    const name =
+      trimmed ||
+      `${activeTab} ${selectedYear} ${now.toLocaleDateString('de-DE')} ${now.toLocaleTimeString('de-DE', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`;
+    const view = {
+      id: String(Date.now()),
+      name,
+      createdAt: now.toISOString(),
+      state: buildCurrentViewState(),
+    };
+    setSavedViews((prev) => [view, ...prev].slice(0, 20));
+    setViewName('');
+    setSavedViewSelection(view.id);
+    setShareMessage(`Saved view "${name}"`);
+  };
+
+  const handleLoadSavedView = () => {
+    if (!savedViewSelection) return;
+    const selected = savedViews.find((view) => view.id === savedViewSelection);
+    if (!selected) return;
+    applyViewState(selected.state);
+    setShareMessage(`Loaded view "${selected.name}"`);
+  };
+
+  const handleDeleteSavedView = () => {
+    if (!savedViewSelection) return;
+    const selected = savedViews.find((view) => view.id === savedViewSelection);
+    setSavedViews((prev) => prev.filter((view) => view.id !== savedViewSelection));
+    setSavedViewSelection('');
+    if (selected) {
+      setShareMessage(`Deleted view "${selected.name}"`);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      if (typeof window === 'undefined') return;
+      if (!navigator?.clipboard?.writeText) {
+        setShareMessage('Clipboard not available');
+        return;
+      }
+      await navigator.clipboard.writeText(window.location.href);
+      setShareMessage('Share link copied');
+    } catch (err) {
+      console.error('Error copying share link:', err);
+      setShareMessage('Could not copy link');
+    }
+  };
+
+  const handlePrintPdf = () => {
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
   };
 
   const formatUnit = (unit) => {
@@ -597,6 +864,49 @@ function App() {
     .filter((d) => d.year === trendBarYear)
     .map((d) => ({ city: d.city, value: d.value }));
 
+  const scatterMetricName =
+    indicators.find((ind) => ind.indicator_code === scatterMetric)?.indicator_name || scatterMetric;
+  const shouldNormalizeScatterX = shouldNormalizeIndicator(
+    scatterMetric,
+    scatterMetricSeries[0]?.unit_of_measure
+  );
+  const scatterMetricLineData = transformDataForLineChart(scatterMetricSeries)
+    .map((point) => {
+      if (!shouldNormalizeScatterX) return point;
+      const normalizedValue = normalizeByPopulation(point.value, point.city, point.year);
+      if (!Number.isFinite(normalizedValue)) return null;
+      return { ...point, value: normalizedValue };
+    })
+    .filter(Boolean);
+
+  const scatterXAxisMap = buildLatestPointMap(scatterMetricLineData, selectedYear);
+  const scatterYAxisMap = buildLatestPointMap(trendLineData, selectedYear);
+  const scatterData = selectedCities
+    .map((city) => {
+      const xPoint = scatterXAxisMap.get(city);
+      const yPoint = scatterYAxisMap.get(city);
+      if (!xPoint || !yPoint) return null;
+      return {
+        city,
+        x: xPoint.value,
+        y: yPoint.value,
+        xYear: xPoint.year,
+        yYear: yPoint.year,
+      };
+    })
+    .filter(Boolean);
+  const scatterUsesFallbackYear = scatterData.some(
+    (point) => point.xYear < selectedYear || point.yYear < selectedYear
+  );
+  const scatterXLabel = `${scatterMetricName} (${chartYLabel(
+    scatterMetricSeries[0]?.unit_of_measure,
+    shouldNormalizeScatterX
+  )})`;
+  const scatterYLabel = `${visibleTimeSeriesData[0]?.indicator_name || 'Indicator'} (${chartYLabel(
+    visibleTimeSeriesData[0]?.unit_of_measure,
+    shouldNormalizeTrends
+  )})`;
+
   const shouldNormalizeCategories = shouldNormalizeIndicator(
     selectedIndicator,
     categoryData[0]?.unit_of_measure
@@ -616,6 +926,7 @@ function App() {
   const categoryBarData = categoryLineData
     .filter((d) => d.year === categoryBarYear)
     .map((d) => ({ city: d.city, value: d.value }));
+
   const duisburgAreaSqKm =
     duisburgInfo?.area_sqkm ??
     cities.find((city) => city.region_name === 'Duisburg')?.area_sqkm ??
@@ -810,7 +1121,26 @@ function App() {
               <option value="line">📈 Line Chart</option>
               <option value="area">📊 Area Chart</option>
               <option value="bar">📊 Bar Chart</option>
+              <option value="horizontal">📉 Horizontal Bars</option>
+              {viewMode === 'cities' && <option value="scatter">🔵 Scatter Plot</option>}
               <option value="table">📋 Table View</option>
+            </select>
+          </div>
+        )}
+
+        {activeTab === 'trends' && viewMode === 'cities' && chartType === 'scatter' && (
+          <div className="control-group">
+            <label htmlFor="scatter-metric-select">X Metric:</label>
+            <select
+              id="scatter-metric-select"
+              value={scatterMetric}
+              onChange={(e) => setScatterMetric(e.target.value)}
+            >
+              {filteredIndicators.map((ind) => (
+                <option key={ind.indicator_code} value={ind.indicator_code}>
+                  {ind.indicator_name}
+                </option>
+              ))}
             </select>
           </div>
         )}
@@ -898,6 +1228,57 @@ function App() {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'trends' && (
+          <div className="control-group view-actions-group">
+            <label htmlFor="saved-view-select">Views:</label>
+            <input
+              id="save-view-name"
+              type="text"
+              placeholder="Optional name"
+              value={viewName}
+              onChange={(e) => setViewName(e.target.value)}
+            />
+            <button type="button" className="toggle-btn" onClick={handleSaveView}>
+              Save View
+            </button>
+            <select
+              id="saved-view-select"
+              value={savedViewSelection}
+              onChange={(e) => setSavedViewSelection(e.target.value)}
+            >
+              <option value="">Saved views ({savedViews.length})</option>
+              {savedViews.map((view) => (
+                <option key={view.id} value={view.id}>
+                  {view.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="toggle-btn"
+              disabled={!savedViewSelection}
+              onClick={handleLoadSavedView}
+            >
+              Load
+            </button>
+            <button
+              type="button"
+              className="toggle-btn"
+              disabled={!savedViewSelection}
+              onClick={handleDeleteSavedView}
+            >
+              Delete
+            </button>
+            <button type="button" className="toggle-btn" onClick={handleCopyLink}>
+              Copy Link
+            </button>
+            <button type="button" className="toggle-btn" onClick={handlePrintPdf}>
+              Print/PDF
+            </button>
+            {shareMessage ? <span className="view-action-status">{shareMessage}</span> : null}
           </div>
         )}
       </div>
@@ -1196,9 +1577,14 @@ function App() {
       {activeTab === 'trends' && viewMode === 'cities' && trendLineData.length > 0 && (
         <div className="charts-section">
           <h2>Historical Trends - City Comparison</h2>
-          {chartType === 'bar' && trendBarYear !== selectedYear && (
+          {(chartType === 'bar' || chartType === 'horizontal') && trendBarYear !== selectedYear && (
             <p className="data-hint">
               No data for {selectedYear}. Showing latest available year: {trendBarYear}.
+            </p>
+          )}
+          {chartType === 'scatter' && scatterUsesFallbackYear && (
+            <p className="data-hint">
+              Some points use the latest available year up to {selectedYear} for one axis.
             </p>
           )}
           <div className="chart-container">
@@ -1232,6 +1618,31 @@ function App() {
                 colorMap={CITY_COLOR_MAP}
               />
             )}
+            {chartType === 'horizontal' && (
+              <HorizontalBarChart
+                data={trendBarData}
+                title={chartTitleWithScale(`${visibleTimeSeriesData[0]?.indicator_name || 'Indicator'} (${trendBarYear})`, shouldNormalizeTrends)}
+                xLabel={chartYLabel(visibleTimeSeriesData[0]?.unit_of_measure, shouldNormalizeTrends)}
+                yLabel="City"
+                highlightCity="Duisburg"
+                colorMap={CITY_COLOR_MAP}
+              />
+            )}
+            {chartType === 'scatter' && scatterData.length > 0 && (
+              <ScatterChart
+                data={scatterData}
+                title={`${visibleTimeSeriesData[0]?.indicator_name || 'Indicator'} vs ${scatterMetricName} (${selectedYear})`}
+                xLabel={scatterXLabel}
+                yLabel={scatterYLabel}
+                highlightCity="Duisburg"
+                colorMap={CITY_COLOR_MAP}
+              />
+            )}
+            {chartType === 'scatter' && scatterData.length === 0 && (
+              <div className="no-data">
+                <p>No matching city values for this scatter comparison.</p>
+              </div>
+            )}
             {chartType === 'table' && (
               <DataTable
                 data={trendLineData}
@@ -1247,7 +1658,7 @@ function App() {
       {activeTab === 'trends' && viewMode === 'categories' && categoryLineData.length > 0 && (
         <div className="charts-section">
           <h2>Historical Trends - Category Breakdown for {selectedCity}</h2>
-          {chartType === 'bar' && categoryBarYear !== selectedYear && (
+          {(chartType === 'bar' || chartType === 'horizontal') && categoryBarYear !== selectedYear && (
             <p className="data-hint">
               No data for {selectedYear}. Showing latest available year: {categoryBarYear}.
             </p>
@@ -1277,6 +1688,15 @@ function App() {
                 title={chartTitleWithScale(`${categoryData[0]?.indicator_name || 'Category Breakdown'} (${categoryBarYear})`, shouldNormalizeCategories)}
                 xLabel="Category"
                 yLabel={chartYLabel(categoryData[0]?.unit_of_measure, shouldNormalizeCategories)}
+                highlightCity={null}
+              />
+            )}
+            {chartType === 'horizontal' && (
+              <HorizontalBarChart
+                data={categoryBarData}
+                title={chartTitleWithScale(`${categoryData[0]?.indicator_name || 'Category Breakdown'} (${categoryBarYear})`, shouldNormalizeCategories)}
+                xLabel={chartYLabel(categoryData[0]?.unit_of_measure, shouldNormalizeCategories)}
+                yLabel="Category"
                 highlightCity={null}
               />
             )}
@@ -1337,6 +1757,7 @@ function App() {
             indicators.find((ind) => ind.indicator_code === selectedIndicator)
               ?.indicator_name || null,
           chartType,
+          scatterMetric,
           normalizePerCapita,
           viewMode,
           selectedCity,

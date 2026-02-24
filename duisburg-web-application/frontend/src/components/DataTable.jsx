@@ -1,3 +1,5 @@
+import ChartToolbar from './ChartToolbar';
+import { downloadCsvRows, sanitizeFilename } from '../utils/exportUtils';
 import './DataTable.css';
 
 const DataTable = ({ data, title, highlightCity = null, maxFractionDigits = 0 }) => {
@@ -31,7 +33,22 @@ const DataTable = ({ data, title, highlightCity = null, maxFractionDigits = 0 })
 
   return (
     <div className="data-table-container">
-      <h3 className="data-table-title">{title}</h3>
+      <div className="table-header">
+        <h3 className="data-table-title">{title}</h3>
+        <ChartToolbar
+          compact
+          onDownloadCsv={() => {
+            const rows = cities.flatMap((city) =>
+              years.map((year) => ({
+                city,
+                year,
+                value: dataMatrix[city][year] ?? null,
+              }))
+            );
+            downloadCsvRows(rows, sanitizeFilename(title || 'table-view'));
+          }}
+        />
+      </div>
       <div className="table-wrapper">
         <table className="data-table">
           <thead>
