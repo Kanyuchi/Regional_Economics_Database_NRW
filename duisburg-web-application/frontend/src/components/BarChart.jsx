@@ -1,14 +1,19 @@
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
+import { DEFAULT_SERIES_COLORS } from '../constants/cityColors';
 
-const BarChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) => {
+const BarChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg', colorMap = null }) => {
   const svgRef = useRef();
 
   useEffect(() => {
-    if (!data || data.length === 0) return;
-
     // Clear previous chart
     d3.select(svgRef.current).selectAll('*').remove();
+
+    if (!data || data.length === 0) return;
+    const cleanData = data.filter(
+      (d) => d && d.city && Number.isFinite(d.value)
+    );
+    if (cleanData.length === 0) return;
 
     // Set dimensions
     const margin = { top: 40, right: 30, bottom: 120, left: 70 };
@@ -26,13 +31,14 @@ const BarChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) =
     // Create scales
     const x = d3
       .scaleBand()
-      .domain(data.map((d) => d.city))
+      .domain(cleanData.map((d) => d.city))
       .range([0, width])
       .padding(0.3);
 
+    const maxValue = d3.max(cleanData, (d) => d.value) || 0;
     const y = d3
       .scaleLinear()
-      .domain([0, d3.max(data, (d) => d.value) * 1.1])
+      .domain([0, maxValue > 0 ? maxValue * 1.1 : 1])
       .range([height, 0]);
 
     // Add X axis
@@ -79,6 +85,20 @@ const BarChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) =
       .style('font-weight', 'bold')
       .text(title);
 
+    const colorScale = d3
+      .scaleOrdinal()
+      .domain(cleanData.map((d) => d.city))
+      .range(DEFAULT_SERIES_COLORS);
+
+    const getBarColor = (city) => {
+      if (colorMap && colorMap[city]) return colorMap[city];
+      if (!colorMap) {
+        if (highlightCity && city === highlightCity) return '#2563eb';
+        if (highlightCity) return '#64748b';
+      }
+      return colorScale(city);
+    };
+
     // Add bars with tooltip
     const tooltip = d3
       .select('body')
@@ -94,14 +114,14 @@ const BarChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) =
 
     svg
       .selectAll('rect')
-      .data(data)
+      .data(cleanData)
       .enter()
       .append('rect')
       .attr('x', (d) => x(d.city))
       .attr('y', height)
       .attr('width', x.bandwidth())
       .attr('height', 0)
-      .attr('fill', (d) => (d.city === highlightCity ? '#2563eb' : '#64748b'))
+      .attr('fill', (d) => getBarColor(d.city))
       .attr('rx', 4)
       .on('mouseover', function (event, d) {
         d3.select(this).attr('opacity', 0.7);
@@ -125,7 +145,7 @@ const BarChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) =
     return () => {
       tooltip.remove();
     };
-  }, [data, title, xLabel, yLabel, highlightCity]);
+  }, [data, title, xLabel, yLabel, highlightCity, colorMap]);
 
   return <svg ref={svgRef}></svg>;
 };

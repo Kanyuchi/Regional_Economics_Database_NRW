@@ -51,6 +51,9 @@ body.chat-open .dashboard {
 
 .tabs {
   display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
   gap: 8px;
   margin-bottom: 24px;
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
@@ -61,7 +64,8 @@ body.chat-open .dashboard {
 }
 
 .tab {
-  flex: 1;
+  flex: 0 0 auto;
+  min-width: 150px;
   padding: 12px 24px;
   border: none;
   background: transparent;
@@ -124,6 +128,29 @@ body.chat-open .dashboard {
   min-width: 120px;
 }
 
+.control-group input[type='text'] {
+  padding: 10px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  color: #1e293b;
+  font-size: 1rem;
+  font-weight: 500;
+  min-width: 260px;
+  transition: all 0.2s ease;
+}
+
+.control-group input[type='text']:hover {
+  border-color: #3b82f6;
+  background: #f8fafc;
+}
+
+.control-group input[type='text']:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
 .control-group select:hover {
   border-color: #3b82f6;
   background: #f8fafc;
@@ -144,6 +171,42 @@ body.chat-open .dashboard {
 .button-group {
   display: flex;
   gap: 8px;
+}
+
+.city-filter-group {
+  align-items: flex-start;
+  width: 100%;
+}
+
+.city-filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.city-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9999px;
+  background: #fff;
+  color: #334155;
+  font-size: 0.85rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.city-filter-chip.active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.city-filter-chip input {
+  margin: 0;
+  accent-color: #2563eb;
 }
 
 .toggle-btn {
@@ -177,12 +240,14 @@ body.chat-open .dashboard {
 
 .overview-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1.25rem;
   margin-bottom: 2rem;
 }
 
-.info-card, .cities-card {
+.info-card,
+.cities-card,
+.overview-block {
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   padding: 24px;
   border-radius: 12px;
@@ -191,12 +256,28 @@ body.chat-open .dashboard {
   transition: all 0.3s ease;
 }
 
-.info-card:hover, .cities-card:hover {
+.info-card {
+  grid-column: span 6;
+}
+
+.cities-card {
+  grid-column: span 6;
+}
+
+.overview-block {
+  grid-column: span 12;
+}
+
+.info-card:hover,
+.cities-card:hover,
+.overview-block:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
 }
 
-.info-card h2, .cities-card h2 {
+.info-card h2,
+.cities-card h2,
+.overview-block h2 {
   font-size: 1.5rem;
   margin-bottom: 1.5rem;
   color: #1e293b;
@@ -252,6 +333,144 @@ body.chat-open .dashboard {
   border-radius: 4px;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+.overview-muted {
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.kpi-card {
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  padding: 14px;
+  background: #f8fbff;
+}
+
+.kpi-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.kpi-head h3 {
+  font-size: 0.92rem;
+  color: #334155;
+}
+
+.kpi-year {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.kpi-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.kpi-change {
+  min-height: 22px;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+
+.kpi-up {
+  color: #0f766e;
+  font-weight: 600;
+}
+
+.kpi-down {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.mini-sparkline {
+  width: 100%;
+  height: 42px;
+  display: block;
+}
+
+.sparkline-empty {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.ranking-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.ranking-chip {
+  border: 1px solid #dbeafe;
+  border-left: 4px solid #3b82f6;
+  background: #f8fbff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #1e293b;
+  font-size: 0.9rem;
+}
+
+.freshness-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.freshness-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+
+.overview-table-wrap {
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.overview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.overview-table th,
+.overview-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.overview-table th {
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 700;
+}
+
+.overview-table .duisburg-row {
+  background: #eff6ff;
+  font-weight: 600;
 }
 
 .charts-section {
@@ -369,4 +588,34 @@ body.chat-open .dashboard {
   font-size: 0.95rem;
   font-weight: 500;
   display: inline-block;
+}
+
+@media (max-width: 1024px) {
+  .dashboard {
+    padding: 20px 16px;
+  }
+
+  .overview-section {
+    grid-template-columns: 1fr;
+  }
+
+  .info-card,
+  .cities-card,
+  .overview-block {
+    grid-column: span 1;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .control-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .control-group input[type='text'] {
+    min-width: 0;
+    width: 100%;
+  }
 }

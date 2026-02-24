@@ -8,6 +8,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
 const CITY_LIST = ['Duisburg', 'Düsseldorf', 'Essen', 'Oberhausen', 'Mülheim an der Ruhr'];
+const LEGACY_INDICATOR_MAP = {
+  unemployment_rate: 'unemployment_persons',
+};
+const UNEMPLOYMENT_PERSONS_CODES = ['unemployment_persons', 'unemployment_rate'];
 const openaiClient = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
@@ -27,6 +31,10 @@ const INDICATOR_ALIAS = {
   gdp: 'GDP_MARKET_PRICE',
   bip: 'GDP_MARKET_PRICE',
 };
+
+function normalizeIndicatorCode(indicatorCode) {
+  return LEGACY_INDICATOR_MAP[indicatorCode] || indicatorCode;
+}
 
 // Hard whitelist for safe indicator access (add here as needed)
 const ALLOWED_INDICATORS = new Set([
@@ -71,6 +79,35 @@ async function getLatestPopulationData() {
   }));
 }
 
+// Fetch full historical population data (last 10 years) for all cities
+async function getHistoricalPopulationData() {
+  const result = await pool.query(
+    `
+    SELECT
+      g.region_name,
+      t.year,
+      fd.value
+    FROM fact_demographics fd
+    JOIN dim_geography g ON fd.geo_id = g.geo_id
+    JOIN dim_indicator i ON fd.indicator_id = i.indicator_id
+    JOIN dim_time t ON fd.time_id = t.time_id
+    WHERE i.indicator_name ILIKE '%Bevölkerung%'
+      AND g.region_type = 'urban_district'
+      AND g.region_name = ANY($1)
+      AND (fd.age_group = 'total' OR fd.age_group IS NULL)
+      AND fd.value > 100000
+    ORDER BY g.region_name, t.year DESC;
+  `,
+    [CITY_LIST]
+  );
+
+  return result.rows.map((row) => ({
+    city: row.region_name,
+    year: parseInt(row.year, 10),
+    value: parseFloat(row.value),
+  }));
+}
+
 function buildPopulationContext(popData) {
   if (!popData || popData.length === 0) {
     return 'No population data available for the requested cities.';
@@ -81,6 +118,37 @@ function buildPopulationContext(popData) {
     .join('\n');
 
   return `Latest population (absolute counts) for NRW cities of interest:\n${top}\nAlways use these numbers for rankings; do not guess.`;
+}
+
+// Build comprehensive historical population context for AI
+function buildHistoricalPopulationContext(historicalData) {
+  if (!historicalData || historicalData.length === 0) {
+    return 'No historical population data available.';
+  }
+
+  // Group by city
+  const byCity = {};
+  historicalData.forEach((row) => {
+    if (!byCity[row.city]) {
+      byCity[row.city] = [];
+    }
+    byCity[row.city].push(row);
+  });
+
+  // Build detailed context with all years
+  let context = 'Historical population data (absolute counts) for NRW cities:\n\n';
+
+  Object.keys(byCity).sort().forEach((city) => {
+    const cityData = byCity[city].sort((a, b) => b.year - a.year);
+    const yearData = cityData
+      .map((row) => `${row.year}: ${Math.round(row.value).toLocaleString('de-DE')}`)
+      .join(', ');
+    context += `${city}: ${yearData}\n`;
+  });
+
+  context += '\nUse these exact values when answering questions about population in specific years. Do not guess or invent numbers.';
+
+  return context;
 }
 
 // Fetch business registrations/deregistrations per city by year (total rows only)
@@ -169,14 +237,14 @@ async function getUnemploymentTrends() {
     JOIN dim_geography g ON fd.geo_id = g.geo_id
     JOIN dim_indicator i ON fd.indicator_id = i.indicator_id
     JOIN dim_time t ON fd.time_id = t.time_id
-    WHERE i.indicator_name ILIKE '%Arbeitslosenquote%'
+    WHERE i.indicator_code = ANY($2)
       AND g.region_type = 'urban_district'
       AND g.region_name = ANY($1)
       AND (fd.age_group = 'total' OR fd.age_group IS NULL)
     GROUP BY g.region_name, t.year, i.indicator_name
     ORDER BY t.year DESC, g.region_name
     `,
-    [CITY_LIST]
+    [CITY_LIST, UNEMPLOYMENT_PERSONS_CODES]
   );
 
   return result.rows.map((row) => ({
@@ -314,6 +382,7 @@ async function findIndicatorByTerm(termOrTerms) {
 }
 
 async function getIndicatorTimeSeries(indicatorCode, cities, startYear, endYear) {
+  const normalizedIndicatorCode = normalizeIndicatorCode(indicatorCode);
   const cityList = cities && cities.length ? cities : CITY_LIST;
   const start = startYear || 2000;
   const end = endYear || 2024;
@@ -337,7 +406,7 @@ async function getIndicatorTimeSeries(indicatorCode, cities, startYear, endYear)
     GROUP BY g.region_name, t.year, i.indicator_name, i.unit_of_measure
     ORDER BY t.year DESC, g.region_name
     `,
-    [cityList, indicatorCode, start, end]
+    [cityList, normalizedIndicatorCode, start, end]
   );
   return result.rows.map((row) => ({
     city: row.region_name,
@@ -367,7 +436,38 @@ function summarizeIndicatorSeries(series, indicatorName, unit) {
   return text.trim();
 }
 
-app.use(cors());
+// CORS configuration for production
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman, curl)
+    if (!origin) return callback(null, true);
+
+    // Parse allowed origins from environment variable
+    const allowedOrigins = process.env.CORS_ORIGINS
+      ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
+      : [
+          'http://localhost:5173',
+          'http://localhost:4173',
+          'http://localhost:3000',
+          'http://localhost:8080',
+          'http://127.0.0.1:5173',
+          'http://127.0.0.1:4173',
+          'http://127.0.0.1:3000',
+          'http://127.0.0.1:8080',
+        ]; // Local dev/preview defaults
+
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Health check endpoint
@@ -534,30 +634,53 @@ app.get('/api/business-economy/:year?', async (req, res) => {
 // Get public finance data for comparison
 app.get('/api/public-finance/:year?', async (req, res) => {
   try {
-    const year = req.params.year || 2023;
+    const year = Number.isFinite(Number(req.params.year)) ? Number(req.params.year) : 2023;
     const result = await pool.query(`
+      WITH aggregated AS (
+        SELECT
+          g.region_name,
+          g.region_code,
+          i.indicator_name,
+          i.indicator_code,
+          i.unit_of_measure,
+          t.year,
+          t.quarter,
+          SUM(fd.value) as value,
+          STRING_AGG(DISTINCT fd.notes, '; ') as notes
+        FROM fact_demographics fd
+        JOIN dim_geography g ON fd.geo_id = g.geo_id
+        JOIN dim_indicator i ON fd.indicator_id = i.indicator_id
+        JOIN dim_time t ON fd.time_id = t.time_id
+        WHERE g.region_type = 'urban_district'
+          AND g.region_name IN ('Duisburg', 'Düsseldorf', 'Essen', 'Oberhausen', 'Mülheim an der Ruhr')
+          AND t.year <= $1
+          AND i.is_active = true
+          AND (i.indicator_category IN ('Public Finance', 'public_finance'))
+          AND (fd.age_group = 'total' OR fd.age_group IS NULL)
+        GROUP BY g.region_name, g.region_code, i.indicator_name, i.indicator_code, i.unit_of_measure, t.year, t.quarter
+      ),
+      ranked AS (
+        SELECT
+          *,
+          ROW_NUMBER() OVER (
+            PARTITION BY region_name, indicator_code
+            ORDER BY year DESC, quarter DESC NULLS LAST
+          ) AS rn
+        FROM aggregated
+      )
       SELECT
-        g.region_name,
-        g.region_code,
-        i.indicator_name,
-        i.indicator_code,
-        i.unit_of_measure,
-        t.year,
-        t.quarter,
-        SUM(fd.value) as value,
-        STRING_AGG(DISTINCT fd.notes, '; ') as notes
-      FROM fact_demographics fd
-      JOIN dim_geography g ON fd.geo_id = g.geo_id
-      JOIN dim_indicator i ON fd.indicator_id = i.indicator_id
-      JOIN dim_time t ON fd.time_id = t.time_id
-      WHERE g.region_type = 'urban_district'
-        AND g.region_name IN ('Duisburg', 'Düsseldorf', 'Essen', 'Oberhausen', 'Mülheim an der Ruhr')
-        AND t.year = $1
-        AND i.is_active = true
-        AND (i.indicator_category IN ('Public Finance', 'public_finance'))
-        AND (fd.age_group = 'total' OR fd.age_group IS NULL)
-      GROUP BY g.region_name, g.region_code, i.indicator_name, i.indicator_code, i.unit_of_measure, t.year, t.quarter
-      ORDER BY g.region_name, i.indicator_name
+        region_name,
+        region_code,
+        indicator_name,
+        indicator_code,
+        unit_of_measure,
+        year,
+        quarter,
+        value,
+        notes
+      FROM ranked
+      WHERE rn = 1
+      ORDER BY region_name, indicator_name
     `, [year]);
     res.json(result.rows);
   } catch (err) {
@@ -571,12 +694,16 @@ app.get('/api/timeseries/:indicatorCode', async (req, res) => {
   try {
     const { indicatorCode } = req.params;
     const { startYear, endYear, cities } = req.query;
+    const normalizedIndicatorCode = normalizeIndicatorCode(indicatorCode);
 
-    const cityList = cities ? cities.split(',') : ['Duisburg', 'Düsseldorf', 'Essen', 'Oberhausen', 'Mülheim an der Ruhr'];
-    const start = startYear || 2010;
-    const end = endYear || 2024;
+    const parsedCities = typeof cities === 'string'
+      ? cities.split(',').map((city) => city.trim()).filter(Boolean)
+      : [];
+    const cityList = parsedCities.length > 0 ? parsedCities : CITY_LIST;
+    const start = Number.isFinite(Number(startYear)) ? Number(startYear) : 2010;
+    const end = Number.isFinite(Number(endYear)) ? Number(endYear) : 2024;
 
-    const result = await pool.query(`
+    const baseQuery = `
       SELECT
         g.region_name,
         g.region_code,
@@ -593,14 +720,33 @@ app.get('/api/timeseries/:indicatorCode', async (req, res) => {
       WHERE g.region_type = 'urban_district'
         AND g.region_name = ANY($1)
         AND i.indicator_code = $2
+        AND i.is_active = true
         AND t.year BETWEEN $3 AND $4
         AND (fd.age_group = 'total' OR fd.age_group IS NULL)
-        AND (fd.notes LIKE '%Total%' OR fd.notes LIKE '%total%' OR fd.notes IS NULL)
+    `;
+
+    const groupedTail = `
       GROUP BY g.region_name, g.region_code, i.indicator_name, i.indicator_code, i.unit_of_measure, t.year, t.quarter
       ORDER BY g.region_name, t.year, t.quarter
-    `, [cityList, indicatorCode, start, end]);
+    `;
 
-    res.json(result.rows);
+    // Prefer explicit "total" rows when present (prevents over-counting category rows).
+    // If none exist for the selected slice, fall back to the full dataset.
+    const totalsResult = await pool.query(
+      `${baseQuery} AND fd.notes ILIKE '%total%' ${groupedTail}`,
+      [cityList, normalizedIndicatorCode, start, end]
+    );
+
+    if (totalsResult.rows.length > 0) {
+      return res.json(totalsResult.rows);
+    }
+
+    const fallbackResult = await pool.query(
+      `${baseQuery} ${groupedTail}`,
+      [cityList, normalizedIndicatorCode, start, end]
+    );
+
+    res.json(fallbackResult.rows);
   } catch (err) {
     console.error('Error fetching time series data:', err);
     res.status(500).json({ error: 'Failed to fetch time series data' });
@@ -680,6 +826,7 @@ app.get('/api/indicator-metadata', async (req, res) => {
 app.get('/api/indicator-years/:indicatorCode', async (req, res) => {
   try {
     const { indicatorCode } = req.params;
+    const normalizedIndicatorCode = normalizeIndicatorCode(indicatorCode);
     const result = await pool.query(`
       SELECT DISTINCT t.year
       FROM fact_demographics f
@@ -692,7 +839,7 @@ app.get('/api/indicator-years/:indicatorCode', async (req, res) => {
         AND i.is_active = true
         AND (f.age_group = 'total' OR f.age_group IS NULL)
       ORDER BY t.year DESC
-    `, [indicatorCode]);
+    `, [normalizedIndicatorCode]);
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching indicator years:', err);
@@ -833,8 +980,16 @@ app.post('/api/chat', async (req, res) => {
     let indicatorSummary = null;
     if (isPopulationQuery) {
       try {
-        const popData = await getLatestPopulationData();
-        populationContext = buildPopulationContext(popData);
+        // Fetch both latest and historical data
+        const [latestPopData, historicalPopData] = await Promise.all([
+          getLatestPopulationData(),
+          getHistoricalPopulationData()
+        ]);
+
+        // Build comprehensive context with both latest rankings and historical data
+        const latestContext = buildPopulationContext(latestPopData);
+        const historicalContext = buildHistoricalPopulationContext(historicalPopData);
+        populationContext = `${latestContext}\n\n${historicalContext}`;
       } catch (popErr) {
         console.error('Population data fetch error:', popErr);
       }
@@ -929,13 +1084,13 @@ app.post('/api/chat', async (req, res) => {
           JOIN dim_geography g ON fd.geo_id = g.geo_id
           JOIN dim_indicator i ON fd.indicator_id = i.indicator_id
           JOIN dim_time t ON fd.time_id = t.time_id
-          WHERE i.indicator_name LIKE '%Arbeitslosenquote%'
+          WHERE i.indicator_code = ANY($1)
             AND g.region_type = 'urban_district'
             AND t.year >= 2020
             AND (fd.age_group = 'total' OR fd.age_group IS NULL)
           ORDER BY t.year DESC, g.region_name
           LIMIT 25
-        `);
+        `, [UNEMPLOYMENT_PERSONS_CODES]);
 
         if (unemploymentData.rows.length > 0) {
           const duisburgLatest = unemploymentData.rows.find(r => r.region_name === 'Duisburg');
@@ -950,7 +1105,7 @@ app.post('/api/chat', async (req, res) => {
           });
 
           response += `\n💡 These are counts of unemployed individuals (not percentages).\n`;
-          response += `📊 Try the "Trends" tab and select "Arbeitslose und Arbeitslosenquoten" to see the time series.`;
+          response += `📊 In the "Trends" tab, pick unemployment indicators to compare counts and rates.`;
         }
       } else if (lowerMessage.includes('population') || lowerMessage.includes('einwohner') || lowerMessage.includes('bevölkerung')) {
         const popData = await pool.query(`

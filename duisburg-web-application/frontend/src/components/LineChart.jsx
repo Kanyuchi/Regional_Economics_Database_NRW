@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
+import { DEFAULT_SERIES_COLORS } from '../constants/cityColors';
 
-const LineChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) => {
+const LineChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg', colorMap = null }) => {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -45,7 +46,12 @@ const LineChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) 
     const colorScale = d3
       .scaleOrdinal()
       .domain(cities)
-      .range(['#2563eb', '#64748b', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']);
+      .range(DEFAULT_SERIES_COLORS);
+
+    const getLineColor = (city) => {
+      if (colorMap && colorMap[city]) return colorMap[city];
+      return colorScale(city);
+    };
 
     // Add X axis
     svg
@@ -101,7 +107,7 @@ const LineChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) 
         .append('path')
         .datum(sortedValues)
         .attr('fill', 'none')
-        .attr('stroke', colorScale(city))
+        .attr('stroke', getLineColor(city))
         .attr('stroke-width', city === highlightCity ? 3 : 1.5)
         .attr('d', line)
         .attr('opacity', city === highlightCity ? 1 : 0.6);
@@ -116,7 +122,7 @@ const LineChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) 
         .attr('cx', (d) => x(d.year))
         .attr('cy', (d) => y(d.value))
         .attr('r', city === highlightCity ? 4 : 3)
-        .attr('fill', colorScale(city))
+        .attr('fill', getLineColor(city))
         .attr('opacity', city === highlightCity ? 1 : 0.6);
     });
 
@@ -133,7 +139,7 @@ const LineChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) 
       .append('rect')
       .attr('width', 18)
       .attr('height', 18)
-      .style('fill', (d) => colorScale(d))
+      .style('fill', (d) => getLineColor(d))
       .attr('opacity', (d) => (d === highlightCity ? 1 : 0.6));
 
     legend
@@ -146,7 +152,7 @@ const LineChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg' }) 
       .style('font-weight', (d) => (d === highlightCity ? 'bold' : 'normal'))
       .text((d) => d);
 
-  }, [data, title, xLabel, yLabel, highlightCity]);
+  }, [data, title, xLabel, yLabel, highlightCity, colorMap]);
 
   return <svg ref={svgRef}></svg>;
 };

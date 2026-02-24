@@ -1,6 +1,6 @@
 import './DataTable.css';
 
-const DataTable = ({ data, title, highlightCity = null }) => {
+const DataTable = ({ data, title, highlightCity = null, maxFractionDigits = 0 }) => {
   if (!data || data.length === 0) {
     return <div className="no-data">No data available</div>;
   }
@@ -24,7 +24,8 @@ const DataTable = ({ data, title, highlightCity = null }) => {
   const formatNumber = (num) => {
     if (num === null || num === undefined) return 'N/A';
     return new Intl.NumberFormat('de-DE', {
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: maxFractionDigits,
     }).format(num);
   };
 

@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
+import { DEFAULT_SERIES_COLORS } from '../constants/cityColors';
 
-const AreaChart = ({ data, title, xLabel = 'X Axis', yLabel = 'Y Axis', highlightCity = null }) => {
+const AreaChart = ({ data, title, xLabel = 'X Axis', yLabel = 'Y Axis', highlightCity = null, colorMap = null }) => {
   const svgRef = useRef();
 
   useEffect(() => {
@@ -31,7 +32,12 @@ const AreaChart = ({ data, title, xLabel = 'X Axis', yLabel = 'Y Axis', highligh
     const colorScale = d3
       .scaleOrdinal()
       .domain(cities)
-      .range(d3.schemeCategory10);
+      .range(DEFAULT_SERIES_COLORS);
+
+    const getAreaColor = (city) => {
+      if (colorMap && colorMap[city]) return colorMap[city];
+      return colorScale(city);
+    };
 
     // Scales
     const xScale = d3
@@ -69,7 +75,7 @@ const AreaChart = ({ data, title, xLabel = 'X Axis', yLabel = 'Y Axis', highligh
       svg
         .append('path')
         .datum(cityData)
-        .attr('fill', colorScale(city))
+        .attr('fill', getAreaColor(city))
         .attr('opacity', isHighlighted ? 0.7 : 0.4)
         .attr('d', area)
         .on('mouseover', function () {
@@ -84,7 +90,7 @@ const AreaChart = ({ data, title, xLabel = 'X Axis', yLabel = 'Y Axis', highligh
         .append('path')
         .datum(cityData)
         .attr('fill', 'none')
-        .attr('stroke', colorScale(city))
+        .attr('stroke', getAreaColor(city))
         .attr('stroke-width', isHighlighted ? 3 : 2)
         .attr('d', line);
     });
@@ -131,7 +137,7 @@ const AreaChart = ({ data, title, xLabel = 'X Axis', yLabel = 'Y Axis', highligh
         .append('rect')
         .attr('width', 15)
         .attr('height', 15)
-        .attr('fill', colorScale(city))
+        .attr('fill', getAreaColor(city))
         .attr('opacity', 0.6);
 
       legendRow
@@ -154,7 +160,7 @@ const AreaChart = ({ data, title, xLabel = 'X Axis', yLabel = 'Y Axis', highligh
       .attr('font-weight', 'bold')
       .attr('fill', '#1e293b')
       .text(title);
-  }, [data, title, xLabel, yLabel, highlightCity]);
+  }, [data, title, xLabel, yLabel, highlightCity, colorMap]);
 
   return (
     <div style={{ overflowX: 'auto' }}>
