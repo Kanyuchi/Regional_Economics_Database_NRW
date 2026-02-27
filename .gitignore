@@ -181,6 +181,8 @@ model_compression_techniques/
 # Node modules
 **/node_modules/
 **/package-lock.json
+# Exception: frontend lock file must be committed so GitHub Actions can run npm ci
+!duisburg-web-application/frontend/package-lock.json
 
 # Build outputs
 **/dist/
