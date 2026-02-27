@@ -1,0 +1,45 @@
+# Gitleaks configuration for Regional Economics Database NRW
+# Runs automatically as a pre-commit hook to block secrets from entering the repo.
+
+title = "Regional NRW Gitleaks Config"
+
+[extend]
+# Use the default ruleset as the base
+useDefault = true
+
+[[rules]]
+id = "aws-rds-endpoint"
+description = "AWS RDS endpoint address"
+regex = '''[a-z0-9\-]+\.[a-z0-9]+\.rds\.amazonaws\.com'''
+tags = ["aws", "database", "infrastructure"]
+
+[[rules]]
+id = "cloudfront-domain"
+description = "CloudFront domain"
+regex = '''[a-z0-9]+\.cloudfront\.net'''
+tags = ["aws", "cdn", "infrastructure"]
+
+[[rules]]
+id = "db-connection-string"
+description = "Database connection string with credentials"
+regex = '''(postgres|postgresql|mysql|mongodb)://[^:\s]+:[^@\s]+@[^\s]+'''
+tags = ["database", "credentials"]
+
+# ── Allowlists: things that look like secrets but aren't ─────────────────────
+[allowlist]
+description = "Allow placeholder values and documentation references"
+regexes = [
+  # Placeholder examples in docs / example files
+  '''your-(instance|database|host)[-\w]*\.(rds\.amazonaws|cloudfront)\.net''',
+  '''your-instance\.xxxxx\.eu-central-1\.rds\.amazonaws\.com''',
+  '''your-backend-url\.onrender\.com''',
+  # README / doc references that contain the live URL (informational, read-only)
+  '''README\.md''',
+]
+paths = [
+  # Allow .example files — they use placeholders, not real values
+  '''\.env\.example$''',
+  '''\.env\.production\.example$''',
+  # Allow this config file itself
+  '''\.gitleaks\.toml$''',
+]
