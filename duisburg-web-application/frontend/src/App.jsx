@@ -7,6 +7,8 @@ import HorizontalBarChart from './components/HorizontalBarChart';
 import ScatterChart from './components/ScatterChart';
 import DataTable from './components/DataTable';
 import Chatbot from './components/Chatbot';
+import IctDotChart from './components/IctDotChart';
+import IctTrendChart from './components/IctTrendChart';
 import { CITY_COLOR_MAP } from './constants/cityColors';
 import './App.css';
 
@@ -102,6 +104,9 @@ function App() {
   const [laborMarketData, setLaborMarketData] = useState([]);
   const [businessEconomyData, setBusinessEconomyData] = useState([]);
   const [ictData, setIctData] = useState([]);
+  const [ictAllYearsData, setIctAllYearsData] = useState({});
+  const [ictAllYearsLoading, setIctAllYearsLoading] = useState(false);
+  const [ictView, setIctView] = useState('snapshot'); // 'snapshot' | 'trends'
   const [publicFinanceData, setPublicFinanceData] = useState([]);
   const [timeSeriesData, setTimeSeriesData] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
@@ -242,6 +247,12 @@ function App() {
     return () => clearTimeout(timer);
   }, [shareMessage]);
 
+  useEffect(() => {
+    if (activeTab === 'ict') {
+      loadIctAllYears();
+    }
+  }, [activeTab]);
+
   const loadInitialData = async () => {
     try {
       setLoading(true);
@@ -347,6 +358,29 @@ function App() {
       }
     } catch (err) {
       console.error('Error loading year data:', err);
+    }
+  };
+
+  const ICT_YEARS = [2020, 2021, 2022, 2023, 2024];
+
+  const loadIctAllYears = async () => {
+    if (ictAllYearsLoading || Object.keys(ictAllYearsData).length > 0) return;
+    setIctAllYearsLoading(true);
+    try {
+      const results = await Promise.allSettled(
+        ICT_YEARS.map((yr) => apiService.getIct(yr))
+      );
+      const combined = {};
+      results.forEach((res, i) => {
+        if (res.status === 'fulfilled' && res.value.data?.length > 0) {
+          combined[ICT_YEARS[i]] = res.value.data;
+        }
+      });
+      setIctAllYearsData(combined);
+    } catch (err) {
+      console.error('Error loading multi-year ICT data:', err);
+    } finally {
+      setIctAllYearsLoading(false);
     }
   };
 
@@ -1176,55 +1210,38 @@ function App() {
       );
     }
 
-    const groups = getGroupedIndicators(rows, 'ict');
-    if (groups.length === 0) {
-      return (
-        <div className="no-data">
-          <p>{emptyMessage}</p>
-        </div>
-      );
-    }
+    const shownYear = rows[0]?.year ?? null;
 
     return (
       <div className="charts-section">
-        <h2>{title}</h2>
-        {leadingHint}
-        <div className="section-groups">
-          {groups.map((group, groupIndex) => {
-            const sectionKey = `ict-kpi:${group.group}`;
-            const isOpen = sectionOpenState[sectionKey] ?? groupIndex === 0;
-            return (
-              <details
-                key={sectionKey}
-                className="section-group"
-                open={isOpen}
-                onToggle={(event) => handleSectionToggle(sectionKey, event.currentTarget.open)}
-              >
-                <summary className="section-group-summary">
-                  <span>{group.group}</span>
-                  <span className="section-group-meta">{group.indicators.length} indicators</span>
-                </summary>
-                <div className="section-group-content">
-                  <div className="ict-kpi-grid">
-                    {group.indicators.map((indicatorName) => {
-                      const row = rows.find((item) => item.indicator_name === indicatorName);
-                      const value = Number.parseFloat(row?.value);
-                      return (
-                        <div key={indicatorName} className="ict-kpi-card">
-                          <h3>{indicatorName}</h3>
-                          <p className="ict-kpi-value">{formatIndicatorValue(value, row?.unit_of_measure)}</p>
-                          <p className="ict-kpi-meta">
-                            {row?.region_name || 'Region'}{row?.year ? ` • ${row.year}` : ''}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </details>
-            );
-          })}
+        <div className="ict-section-header">
+          <h2>{title}</h2>
+          <div className="ict-view-toggle">
+            <button
+              className={ictView === 'snapshot' ? 'ict-toggle-btn active' : 'ict-toggle-btn'}
+              onClick={() => setIctView('snapshot')}
+            >
+              Snapshot
+            </button>
+            <button
+              className={ictView === 'trends' ? 'ict-toggle-btn active' : 'ict-toggle-btn'}
+              onClick={() => { setIctView('trends'); loadIctAllYears(); }}
+            >
+              Trends 2020–2024
+            </button>
+          </div>
         </div>
+        {leadingHint}
+        {ictView === 'snapshot' && (
+          <IctDotChart data={rows} year={shownYear} />
+        )}
+        {ictView === 'trends' && (
+          ictAllYearsLoading
+            ? <div className="loading-indicator"><p>Loading multi-year data…</p></div>
+            : Object.keys(ictAllYearsData).length >= 2
+              ? <IctTrendChart yearData={ictAllYearsData} />
+              : <div className="no-data"><p>Multi-year ICT data not yet loaded.</p></div>
+        )}
       </div>
     );
   };

@@ -671,6 +671,50 @@ body.chat-open .dashboard {
   color: #475569;
 }
 
+/* ── ICT Section Header & View Toggle ────────────────────── */
+.ict-section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.ict-section-header h2 {
+  margin: 0;
+}
+
+.ict-view-toggle {
+  display: flex;
+  gap: 4px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.ict-toggle-btn {
+  border: none;
+  background: transparent;
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: #64748b;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ict-toggle-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.ict-toggle-btn.active {
+  background: white;
+  color: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
 @media (min-width: 1400px) {
   .charts-grid {
     grid-template-columns: repeat(2, 1fr);
