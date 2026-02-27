@@ -811,6 +811,12 @@ body.chat-open .dashboard {
   font-weight: 500;
 }
 
+.data-hint--warning {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+  color: #92400e;
+}
+
 .no-data .data-hint {
   margin-top: 16px;
   padding: 12px 24px;

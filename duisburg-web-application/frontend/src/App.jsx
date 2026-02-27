@@ -1046,9 +1046,6 @@ function App() {
     selectedCities.includes(d.region_name)
   );
   const visibleIctData = ictData;
-  const ictUsesFallbackYear = visibleIctData.some(
-    (row) => Number.parseInt(row.year, 10) < selectedYear
-  );
   const ictRegions = sortCities(visibleIctData.map((row) => row.region_name));
   const ictRegionTypes = [...new Set(visibleIctData.map((row) => row.region_type).filter(Boolean))];
   const ictShownYears = [...new Set(visibleIctData
@@ -1159,11 +1156,15 @@ function App() {
     null;
 
   const ictLeadingHint = visibleIctData.length > 0 ? (
-    <p className="data-hint">
-      ICT scope: {ictScopeLabel}. Selected year {selectedYear}
-      {ictShownYear ? `, shown year ${ictShownYear}` : ''}.
-      {ictUsesFallbackYear ? ' Latest available data is used where needed.' : ''}
-    </p>
+    ictShownYear && ictShownYear !== selectedYear ? (
+      <p className="data-hint data-hint--warning">
+        ICT data is only available for {ictShownYear}. The year filter ({selectedYear}) has no effect on this tab — the figures below always reflect the latest available survey ({ictShownYear}).
+      </p>
+    ) : (
+      <p className="data-hint">
+        ICT scope: {ictScopeLabel}. Data year: {ictShownYear ?? selectedYear}.
+      </p>
+    )
   ) : null;
 
   const renderIctKpiSections = (rows, title, emptyMessage, leadingHint = null) => {
