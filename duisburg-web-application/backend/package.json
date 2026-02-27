@@ -3,10 +3,15 @@
   "version": "1.0.0",
   "description": "Backend API for Duisburg Regional Economic Dashboard",
   "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "mcp": "node mcp/postgres-server.js"
+    "mcp": "node mcp/postgres-server.js",
+    "test:db": "node tests/test_db_connection.js"
   },
   "dependencies": {
     "@modelcontextprotocol/server-postgres": "^0.6.2",

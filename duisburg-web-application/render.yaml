@@ -1,0 +1,52 @@
+# Render.com Blueprint Configuration
+# This file configures automatic deployment of the Duisburg Dashboard backend
+
+services:
+  # Backend API Service
+  - type: web
+    name: duisburg-backend
+    runtime: node
+    region: frankfurt  # Choose: oregon, frankfurt, singapore, ohio
+    plan: free  # Options: free, starter, standard, pro
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && node server.js
+    envVars:
+      # Database connection (use Render's PostgreSQL or external database)
+      - key: DB_HOST
+        sync: false  # Set manually in Render dashboard
+      - key: DB_PORT
+        value: 5432
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSL
+        value: true
+      - key: PGSSLMODE
+        value: require
+
+      # Server config (PORT is automatically set by Render)
+      - key: HOST
+        value: 0.0.0.0
+
+      # Optional: OpenAI for chatbot
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+
+      # CORS - Set this to your Vercel frontend URL
+      - key: CORS_ORIGINS
+        sync: false  # Example: https://duisburg-dashboard.vercel.app
+
+    healthCheckPath: /api/health
+
+# Optional: Render PostgreSQL Database
+# Uncomment if you want Render to host your database
+# databases:
+#   - name: regional-db
+#     databaseName: regional_db
+#     plan: free  # 90-day free trial, then $7/month
+#     region: frankfurt

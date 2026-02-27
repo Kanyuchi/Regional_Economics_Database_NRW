@@ -18,9 +18,16 @@ const OVERVIEW_KPI_CONFIG = [
 ];
 const PER_CAPITA_BASE = 1000;
 const SAVED_VIEWS_STORAGE_KEY = 'duisburg_dashboard_saved_views_v1';
-const VALID_TABS = new Set(['overview', 'demographics', 'labor', 'business', 'finance', 'trends']);
+const VALID_TABS = new Set(['overview', 'demographics', 'labor', 'business', 'ict', 'finance', 'trends']);
 const VALID_VIEW_MODES = new Set(['cities', 'categories']);
 const VALID_CHART_TYPES = new Set(['line', 'area', 'bar', 'horizontal', 'scatter', 'table']);
+const FALLBACK_GROUP_TITLES = {
+  demographics: 'Demographics',
+  labor: 'Labor Market',
+  business: 'Business & GDP',
+  ict: 'ICT / Digitization',
+  finance: 'Public Finance',
+};
 
 function parseInitialUrlState() {
   if (typeof window === 'undefined') return {};
@@ -47,6 +54,10 @@ function parseInitialUrlState() {
     normalizePerCapita:
       params.get('perCapita') === '1' || params.get('perCapita') === 'true',
     scatterMetric: params.get('scatterMetric') || undefined,
+    overviewMetricCode: params.get('overviewMetric') || undefined,
+    headToHeadMetricCode: params.get('headMetric') || undefined,
+    headToHeadLeftCity: params.get('headLeft') || undefined,
+    headToHeadRightCity: params.get('headRight') || undefined,
   };
 }
 
@@ -90,6 +101,7 @@ function App() {
   const [demographicsData, setDemographicsData] = useState([]);
   const [laborMarketData, setLaborMarketData] = useState([]);
   const [businessEconomyData, setBusinessEconomyData] = useState([]);
+  const [ictData, setIctData] = useState([]);
   const [publicFinanceData, setPublicFinanceData] = useState([]);
   const [timeSeriesData, setTimeSeriesData] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
@@ -107,6 +119,11 @@ function App() {
   const [savedViewSelection, setSavedViewSelection] = useState('');
   const [viewName, setViewName] = useState('');
   const [shareMessage, setShareMessage] = useState('');
+  const [sectionOpenState, setSectionOpenState] = useState({});
+  const [overviewMetricCode, setOverviewMetricCode] = useState(initialUrlState.overviewMetricCode ?? 'pop_total');
+  const [headToHeadLeftCity, setHeadToHeadLeftCity] = useState(initialUrlState.headToHeadLeftCity ?? 'Duisburg');
+  const [headToHeadRightCity, setHeadToHeadRightCity] = useState(initialUrlState.headToHeadRightCity ?? 'Essen');
+  const [headToHeadMetricCode, setHeadToHeadMetricCode] = useState(initialUrlState.headToHeadMetricCode ?? 'GDP_MARKET_PRICE');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(initialUrlState.activeTab ?? 'overview');
@@ -173,6 +190,10 @@ function App() {
     if (selectedCities.length > 0) params.set('cities', selectedCities.join(','));
     if (normalizePerCapita) params.set('perCapita', '1');
     if (scatterMetric) params.set('scatterMetric', scatterMetric);
+    if (overviewMetricCode) params.set('overviewMetric', overviewMetricCode);
+    if (headToHeadMetricCode) params.set('headMetric', headToHeadMetricCode);
+    if (headToHeadLeftCity) params.set('headLeft', headToHeadLeftCity);
+    if (headToHeadRightCity) params.set('headRight', headToHeadRightCity);
     window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
   }, [
     activeTab,
@@ -185,6 +206,10 @@ function App() {
     selectedCities,
     normalizePerCapita,
     scatterMetric,
+    overviewMetricCode,
+    headToHeadMetricCode,
+    headToHeadLeftCity,
+    headToHeadRightCity,
   ]);
 
   useEffect(() => {
@@ -237,21 +262,27 @@ function App() {
       });
       setSelectedCity((prev) => (cityNames.includes(prev) ? prev : 'Duisburg'));
       setAvailableYears(yearsRes.data);
-      const visibleIndicators = indicatorsRes.data.filter(
-        (ind) => ind.indicator_code !== 'unemployment_rate'
-      );
-      setIndicators(visibleIndicators);
 
-      // Create a map of indicator_code -> metadata (min_year, max_year, year_count)
+      // Create a map of indicator_code -> metadata (year range + best available scope)
       const metadataMap = {};
       metadataRes.data.forEach((item) => {
         metadataMap[item.indicator_code] = {
           min_year: parseInt(item.min_year),
           max_year: parseInt(item.max_year),
           year_count: parseInt(item.year_count),
+          data_scope: item.data_scope || 'city',
+          primary_source_table: item.primary_source_table || 'fact_demographics',
         };
       });
       setIndicatorMetadata(metadataMap);
+
+      const visibleIndicators = indicatorsRes.data.filter((ind) => {
+        if (ind.indicator_code === 'unemployment_rate') return false; // legacy alias
+        const metadata = metadataMap[ind.indicator_code];
+        // Trends view is city-comparison focused, so only expose indicators with city-level coverage.
+        return Boolean(metadata && metadata.data_scope === 'city');
+      });
+      setIndicators(visibleIndicators);
 
       // Set default indicator for labor market (prefer % rate, fallback to unemployed persons)
       const unemploymentIndicator =
@@ -285,16 +316,18 @@ function App() {
 
   const loadYearData = async (year) => {
     try {
-      const [demoRes, laborRes, businessRes, financeRes] = await Promise.allSettled([
+      const [demoRes, laborRes, businessRes, ictRes, financeRes] = await Promise.allSettled([
         apiService.getDemographics(year),
         apiService.getLaborMarket(year),
         apiService.getBusinessEconomy(year),
+        apiService.getIct(year),
         apiService.getPublicFinance(year),
       ]);
 
       setDemographicsData(demoRes.status === 'fulfilled' ? demoRes.value.data : []);
       setLaborMarketData(laborRes.status === 'fulfilled' ? laborRes.value.data : []);
       setBusinessEconomyData(businessRes.status === 'fulfilled' ? businessRes.value.data : []);
+      setIctData(ictRes.status === 'fulfilled' ? ictRes.value.data : []);
       setPublicFinanceData(financeRes.status === 'fulfilled' ? financeRes.value.data : []);
 
       if (demoRes.status === 'rejected') {
@@ -305,6 +338,9 @@ function App() {
       }
       if (businessRes.status === 'rejected') {
         console.error('Error loading business economy data:', businessRes.reason);
+      }
+      if (ictRes.status === 'rejected') {
+        console.error('Error loading ICT data:', ictRes.reason);
       }
       if (financeRes.status === 'rejected') {
         console.error('Error loading public finance data:', financeRes.reason);
@@ -465,6 +501,74 @@ function App() {
     });
   };
 
+  const toTitleCase = (value) =>
+    String(value || '')
+      .replace(/[_-]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  const inferFallbackGroup = (tabKey, indicatorName = '') => {
+    const name = indicatorName.toLowerCase();
+    if (tabKey === 'demographics') {
+      if (name.includes('bevölk') || name.includes('population')) return 'Population';
+      if (name.includes('pflege') || name.includes('care')) return 'Care Services';
+      if (name.includes('kranken') || name.includes('arzt') || name.includes('hospital') || name.includes('health')) return 'Healthcare';
+      if (name.includes('straße') || name.includes('autobahn') || name.includes('road')) return 'Infrastructure';
+    }
+    if (tabKey === 'labor') {
+      if (name.includes('arbeitslos') || name.includes('unemployment')) return 'Unemployment';
+      if (name.includes('pendler') || name.includes('commuter')) return 'Commuters';
+      if (name.includes('entgelt') || name.includes('wage')) return 'Wages';
+      if (name.includes('beschäft')) return 'Employment';
+    }
+    if (tabKey === 'business') {
+      if (name.includes('gdp') || name.includes('bip') || name.includes('value added') || name.includes('bruttowert')) return 'GDP & GVA';
+      if (name.includes('gründ') || name.includes('insolvenz') || name.includes('business')) return 'Business Dynamics';
+      if (name.includes('compensation') || name.includes('entgelt')) return 'Compensation';
+    }
+    if (tabKey === 'ict') {
+      if (name.includes('internet') || name.includes('website')) return 'Connectivity';
+      if (name.includes('cloud') || name.includes('big data') || name.includes('ai') || name.includes('robot')) return 'Digital Adoption';
+      if (name.includes('e-commerce') || name.includes('online')) return 'Digital Commerce';
+    }
+    if (tabKey === 'finance') {
+      if (name.includes('steuer') || name.includes('tax') || name.includes('einkommens')) return 'Tax & Income';
+      if (name.includes('municipal') || name.includes('finanz')) return 'Municipal Finances';
+    }
+    return FALLBACK_GROUP_TITLES[tabKey] || 'Indicators';
+  };
+
+  const getRowGroup = (row, tabKey) => {
+    const explicit = row.indicator_subcategory || row.indicator_category;
+    if (explicit && String(explicit).trim()) {
+      return toTitleCase(explicit);
+    }
+    return inferFallbackGroup(tabKey, row.indicator_name);
+  };
+
+  const getGroupedIndicators = (rows, tabKey) => {
+    const map = new Map();
+    rows.forEach((row) => {
+      const group = getRowGroup(row, tabKey);
+      if (!map.has(group)) map.set(group, new Set());
+      map.get(group).add(row.indicator_name);
+    });
+    return Array.from(map.entries())
+      .map(([group, indicators]) => ({
+        group,
+        indicators: Array.from(indicators).sort((a, b) => a.localeCompare(b)),
+      }))
+      .sort((a, b) => a.group.localeCompare(b.group));
+  };
+
+  const handleSectionToggle = (sectionKey, nextOpen) => {
+    setSectionOpenState((prev) => ({
+      ...prev,
+      [sectionKey]: nextOpen,
+    }));
+  };
+
   const buildCurrentViewState = () => ({
     activeTab,
     selectedYear,
@@ -476,6 +580,10 @@ function App() {
     chartType,
     normalizePerCapita,
     scatterMetric,
+    overviewMetricCode,
+    headToHeadMetricCode,
+    headToHeadLeftCity,
+    headToHeadRightCity,
   });
 
   const applyViewState = (state) => {
@@ -494,6 +602,10 @@ function App() {
     if (state.chartType && VALID_CHART_TYPES.has(state.chartType)) setChartType(state.chartType);
     if (typeof state.normalizePerCapita === 'boolean') setNormalizePerCapita(state.normalizePerCapita);
     if (state.scatterMetric) setScatterMetric(state.scatterMetric);
+    if (state.overviewMetricCode) setOverviewMetricCode(state.overviewMetricCode);
+    if (state.headToHeadMetricCode) setHeadToHeadMetricCode(state.headToHeadMetricCode);
+    if (state.headToHeadLeftCity) setHeadToHeadLeftCity(state.headToHeadLeftCity);
+    if (state.headToHeadRightCity) setHeadToHeadRightCity(state.headToHeadRightCity);
   };
 
   const handleSaveView = () => {
@@ -559,6 +671,18 @@ function App() {
   const formatUnit = (unit) => {
     if (!unit) return 'Value';
     return unit.replace(/_/g, ' ');
+  };
+
+  const formatIndicatorValue = (value, unit) => {
+    if (!Number.isFinite(value)) return '—';
+    const normalizedUnit = (unit || '').toLowerCase();
+    const isPercent = normalizedUnit.includes('prozent') || normalizedUnit.includes('percent') || normalizedUnit.includes('%');
+    const maxFractionDigits = isPercent ? 1 : Math.abs(value) >= 100 ? 0 : 2;
+    const formatted = value.toLocaleString('de-DE', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: maxFractionDigits,
+    });
+    return unit ? `${formatted} ${formatUnit(unit)}` : formatted;
   };
 
   const shouldNormalizeIndicator = (indicatorCode, unit) => {
@@ -760,6 +884,86 @@ function App() {
     }));
   }, [overviewComparisonCities, overviewSeries, selectedYear]);
 
+  const overviewMetricConfig = OVERVIEW_KPI_CONFIG.find((kpi) => kpi.code === overviewMetricCode) || OVERVIEW_KPI_CONFIG[0];
+  const headToHeadMetricConfig = OVERVIEW_KPI_CONFIG.find((kpi) => kpi.code === headToHeadMetricCode) || OVERVIEW_KPI_CONFIG[0];
+
+  const overviewMetricValues = useMemo(() => {
+    return overviewComparisonCities
+      .map((cityName) => {
+        const exactValue = getCityMetricPoint(overviewMetricConfig.code, cityName, selectedYear, true)?.value ?? null;
+        const fallbackValue = getCityMetricPoint(overviewMetricConfig.code, cityName, selectedYear)?.value ?? null;
+        const cityGeo = cities.find((city) => city.region_name === cityName);
+        return {
+          city: cityName,
+          value: Number.isFinite(exactValue) ? exactValue : fallbackValue,
+          latitude: Number.parseFloat(cityGeo?.latitude),
+          longitude: Number.parseFloat(cityGeo?.longitude),
+        };
+      })
+      .filter((row) => Number.isFinite(row.value));
+  }, [overviewComparisonCities, overviewMetricConfig.code, selectedYear, overviewSeries, cities]);
+
+  const mapPoints = overviewMetricValues.filter(
+    (row) => Number.isFinite(row.latitude) && Number.isFinite(row.longitude)
+  );
+
+  const mapProjection = useMemo(() => {
+    if (mapPoints.length === 0) return null;
+    const minLat = Math.min(...mapPoints.map((row) => row.latitude));
+    const maxLat = Math.max(...mapPoints.map((row) => row.latitude));
+    const minLon = Math.min(...mapPoints.map((row) => row.longitude));
+    const maxLon = Math.max(...mapPoints.map((row) => row.longitude));
+    const latSpan = maxLat - minLat || 1;
+    const lonSpan = maxLon - minLon || 1;
+    const width = 780;
+    const height = 360;
+    const padding = 36;
+    const maxValue = Math.max(...mapPoints.map((row) => row.value)) || 1;
+    return {
+      width,
+      height,
+      project: (row) => ({
+        x: padding + ((row.longitude - minLon) / lonSpan) * (width - padding * 2),
+        y: padding + ((maxLat - row.latitude) / latSpan) * (height - padding * 2),
+        r: 8 + Math.sqrt(Math.max(row.value, 0) / maxValue) * 18,
+      }),
+    };
+  }, [mapPoints]);
+
+  const topBottomRankings = useMemo(() => {
+    const sorted = [...overviewMetricValues].sort((a, b) => b.value - a.value);
+    return {
+      top: sorted.slice(0, Math.min(3, sorted.length)),
+      bottom: [...sorted].reverse().slice(0, Math.min(3, sorted.length)),
+    };
+  }, [overviewMetricValues]);
+
+  const headToHeadCities = useMemo(() => {
+    return overviewComparisonCities.length > 0 ? overviewComparisonCities : sortCities(cities.map((city) => city.region_name));
+  }, [overviewComparisonCities, cities, cityOrder]);
+
+  useEffect(() => {
+    if (headToHeadCities.length === 0) return;
+    if (!headToHeadCities.includes(headToHeadLeftCity)) {
+      setHeadToHeadLeftCity(headToHeadCities[0]);
+    }
+    if (!headToHeadCities.includes(headToHeadRightCity)) {
+      const fallbackRight = headToHeadCities.find((city) => city !== headToHeadCities[0]) || headToHeadCities[0];
+      setHeadToHeadRightCity(fallbackRight);
+    }
+  }, [headToHeadCities, headToHeadLeftCity, headToHeadRightCity]);
+
+  const headToHeadLeftValue = getCityMetricPoint(headToHeadMetricConfig.code, headToHeadLeftCity, selectedYear)?.value ?? null;
+  const headToHeadRightValue = getCityMetricPoint(headToHeadMetricConfig.code, headToHeadRightCity, selectedYear)?.value ?? null;
+  const headToHeadDelta =
+    Number.isFinite(headToHeadLeftValue) && Number.isFinite(headToHeadRightValue)
+      ? headToHeadLeftValue - headToHeadRightValue
+      : null;
+  const headToHeadDeltaPct =
+    headToHeadDelta !== null && Number.isFinite(headToHeadRightValue) && headToHeadRightValue !== 0
+      ? (headToHeadDelta / headToHeadRightValue) * 100
+      : null;
+
   const demographicsCities = useMemo(
     () => sortCities(demographicsData.map((d) => d.region_name)),
     [demographicsData, cityOrder]
@@ -773,6 +977,11 @@ function App() {
   const businessCities = useMemo(
     () => sortCities(businessEconomyData.map((d) => d.region_name)),
     [businessEconomyData, cityOrder]
+  );
+
+  const ictCities = useMemo(
+    () => sortCities(ictData.map((d) => d.region_name)),
+    [ictData, cityOrder]
   );
 
   const publicFinanceCities = useMemo(
@@ -789,10 +998,11 @@ function App() {
     if (activeTab === 'demographics') return demographicsCities;
     if (activeTab === 'labor') return laborCities;
     if (activeTab === 'business') return businessCities;
+    if (activeTab === 'ict') return ictCities;
     if (activeTab === 'finance') return publicFinanceCities;
     if (activeTab === 'trends' && viewMode === 'cities') return trendsCities;
     return sortCities(cities.map((city) => city.region_name));
-  }, [activeTab, viewMode, demographicsCities, laborCities, businessCities, publicFinanceCities, trendsCities, cities, cityOrder]);
+  }, [activeTab, viewMode, demographicsCities, laborCities, businessCities, ictCities, publicFinanceCities, trendsCities, cities, cityOrder]);
 
   useEffect(() => {
     if (cityFilterOptions.length === 0) return;
@@ -835,6 +1045,22 @@ function App() {
   const visibleBusinessEconomyData = businessEconomyData.filter((d) =>
     selectedCities.includes(d.region_name)
   );
+  const visibleIctData = ictData;
+  const ictUsesFallbackYear = visibleIctData.some(
+    (row) => Number.parseInt(row.year, 10) < selectedYear
+  );
+  const ictRegions = sortCities(visibleIctData.map((row) => row.region_name));
+  const ictRegionTypes = [...new Set(visibleIctData.map((row) => row.region_type).filter(Boolean))];
+  const ictShownYears = [...new Set(visibleIctData
+    .map((row) => Number.parseInt(row.year, 10))
+    .filter((year) => Number.isFinite(year)))].sort((a, b) => a - b);
+  const ictShownYear = ictShownYears.length > 0 ? ictShownYears[ictShownYears.length - 1] : null;
+  const ictSingleRegion = ictRegions.length === 1;
+  const ictIsStateScope = ictRegionTypes.length === 1 && ictRegionTypes[0] === 'state';
+  const ictScopeLabel = ictSingleRegion
+    ? `${ictRegions[0]} (${toTitleCase(ictRegionTypes[0] || 'region')})`
+    : `${ictRegions.length} regions`;
+  const showScaleToggle = activeTab !== 'overview' && !(activeTab === 'ict' && (ictSingleRegion || ictIsStateScope));
   const visiblePublicFinanceData = publicFinanceData.filter((d) =>
     selectedCities.includes(d.region_name)
   );
@@ -932,6 +1158,164 @@ function App() {
     cities.find((city) => city.region_name === 'Duisburg')?.area_sqkm ??
     null;
 
+  const ictLeadingHint = visibleIctData.length > 0 ? (
+    <p className="data-hint">
+      ICT scope: {ictScopeLabel}. Selected year {selectedYear}
+      {ictShownYear ? `, shown year ${ictShownYear}` : ''}.
+      {ictUsesFallbackYear ? ' Latest available data is used where needed.' : ''}
+    </p>
+  ) : null;
+
+  const renderIctKpiSections = (rows, title, emptyMessage, leadingHint = null) => {
+    if (!rows || rows.length === 0) {
+      return (
+        <div className="no-data">
+          <p>{emptyMessage}</p>
+        </div>
+      );
+    }
+
+    const groups = getGroupedIndicators(rows, 'ict');
+    if (groups.length === 0) {
+      return (
+        <div className="no-data">
+          <p>{emptyMessage}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="charts-section">
+        <h2>{title}</h2>
+        {leadingHint}
+        <div className="section-groups">
+          {groups.map((group, groupIndex) => {
+            const sectionKey = `ict-kpi:${group.group}`;
+            const isOpen = sectionOpenState[sectionKey] ?? groupIndex === 0;
+            return (
+              <details
+                key={sectionKey}
+                className="section-group"
+                open={isOpen}
+                onToggle={(event) => handleSectionToggle(sectionKey, event.currentTarget.open)}
+              >
+                <summary className="section-group-summary">
+                  <span>{group.group}</span>
+                  <span className="section-group-meta">{group.indicators.length} indicators</span>
+                </summary>
+                <div className="section-group-content">
+                  <div className="ict-kpi-grid">
+                    {group.indicators.map((indicatorName) => {
+                      const row = rows.find((item) => item.indicator_name === indicatorName);
+                      const value = Number.parseFloat(row?.value);
+                      return (
+                        <div key={indicatorName} className="ict-kpi-card">
+                          <h3>{indicatorName}</h3>
+                          <p className="ict-kpi-value">{formatIndicatorValue(value, row?.unit_of_measure)}</p>
+                          <p className="ict-kpi-meta">
+                            {row?.region_name || 'Region'}{row?.year ? ` • ${row.year}` : ''}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </details>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderGroupedBarSections = (
+    rows,
+    tabKey,
+    title,
+    emptyMessage,
+    leadingHint = null,
+    options = {}
+  ) => {
+    const {
+      xAxisLabel = 'City',
+      highlightCity = 'Duisburg',
+      colorMap = CITY_COLOR_MAP,
+    } = options;
+
+    if (!rows || rows.length === 0) {
+      return (
+        <div className="no-data">
+          <p>{emptyMessage}</p>
+        </div>
+      );
+    }
+
+    const groups = getGroupedIndicators(rows, tabKey);
+    if (groups.length === 0) {
+      return (
+        <div className="no-data">
+          <p>{emptyMessage}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="charts-section">
+        <h2>{title}</h2>
+        {leadingHint}
+        <div className="section-groups">
+          {groups.map((group, groupIndex) => {
+            const sectionKey = `${tabKey}:${group.group}`;
+            const isOpen = sectionOpenState[sectionKey] ?? groupIndex === 0;
+            return (
+              <details
+                key={sectionKey}
+                className="section-group"
+                open={isOpen}
+                onToggle={(event) => handleSectionToggle(sectionKey, event.currentTarget.open)}
+              >
+                <summary className="section-group-summary">
+                  <span>{group.group}</span>
+                  <span className="section-group-meta">{group.indicators.length} indicators</span>
+                </summary>
+                <div className="section-group-content">
+                  <div className="charts-grid">
+                    {group.indicators.map((indicatorName) => {
+                      const indicatorRow = rows.find((row) => row.indicator_name === indicatorName);
+                      const unit = indicatorRow?.unit_of_measure;
+                      const indicatorCode = indicatorRow?.indicator_code;
+                      const { data: chartData, normalized } = buildCityComparisonBarData(
+                        rows,
+                        indicatorName,
+                        indicatorCode,
+                        unit,
+                        selectedYear
+                      );
+                      if (chartData.length === 0) return null;
+
+                      return (
+                        <div key={indicatorName} className="chart-container">
+                          <BarChart
+                            data={chartData}
+                            title={chartTitleWithScale(indicatorName, normalized)}
+                            xLabel={xAxisLabel}
+                            yLabel={chartYLabel(unit, normalized)}
+                            highlightCity={highlightCity}
+                            colorMap={colorMap}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </details>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="loading">
@@ -1015,6 +1399,12 @@ function App() {
           onClick={() => setActiveTab('business')}
         >
           Business & GDP
+        </button>
+        <button
+          className={activeTab === 'ict' ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab('ict')}
+        >
+          ICT / Digitization
         </button>
         <button
           className={activeTab === 'finance' ? 'tab active' : 'tab'}
@@ -1145,7 +1535,7 @@ function App() {
           </div>
         )}
 
-        {activeTab !== 'overview' && (
+        {showScaleToggle && (
           <div className="control-group">
             <label>Scale:</label>
             <div className="button-group">
@@ -1414,165 +1804,226 @@ function App() {
             </div>
             <p className="overview-muted">Only exact values from {selectedYear} are shown in this table.</p>
           </div>
-        </div>
-      )}
 
-      {activeTab === 'demographics' && visibleDemographicsData.length > 0 && (
-      <div className="charts-section">
-        <h2>Demographics Comparison ({selectedYear})</h2>
-        <div className="charts-grid">
-          {[...new Set(visibleDemographicsData.map((d) => d.indicator_name))].map(
-            (indicatorName) => {
-                const indicatorRow = visibleDemographicsData.find(
-                  (d) => d.indicator_name === indicatorName
-                );
-                const unit = indicatorRow?.unit_of_measure;
-                const indicatorCode = indicatorRow?.indicator_code;
-                const { data: chartData, normalized } = buildCityComparisonBarData(
-                  visibleDemographicsData,
-                  indicatorName,
-                  indicatorCode,
-                  unit,
-                  selectedYear
-                );
-                if (chartData.length === 0) return null;
-
-                return (
-                <div key={indicatorName} className="chart-container">
-                  <BarChart
-                    data={chartData}
-                    title={chartTitleWithScale(indicatorName, normalized)}
-                    xLabel="City"
-                    yLabel={chartYLabel(unit, normalized)}
-                    highlightCity="Duisburg"
-                    colorMap={CITY_COLOR_MAP}
+          <div className="overview-block map-block">
+            <div className="overview-block-head">
+              <h2>Map & Ranking Insights</h2>
+              <div className="control-group">
+                <label htmlFor="overview-metric-select">Metric:</label>
+                <select
+                  id="overview-metric-select"
+                  value={overviewMetricConfig.code}
+                  onChange={(event) => setOverviewMetricCode(event.target.value)}
+                >
+                  {OVERVIEW_KPI_CONFIG.map((metric) => (
+                    <option key={metric.code} value={metric.code}>
+                      {metric.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {mapProjection && mapPoints.length > 0 ? (
+              <div className="city-map-wrap">
+                <svg
+                  className="city-map"
+                  viewBox={`0 0 ${mapProjection.width} ${mapProjection.height}`}
+                  preserveAspectRatio="xMidYMid meet"
+                >
+                  <rect
+                    x="0"
+                    y="0"
+                    width={mapProjection.width}
+                    height={mapProjection.height}
+                    fill="#f8fafc"
+                    stroke="#e2e8f0"
+                    rx="10"
                   />
-                </div>
-              );
-            }
+                  {mapPoints.map((point) => {
+                    const projected = mapProjection.project(point);
+                    const color = CITY_COLOR_MAP[point.city] || '#64748b';
+                    return (
+                      <g key={point.city}>
+                        <circle
+                          cx={projected.x}
+                          cy={projected.y}
+                          r={projected.r}
+                          fill={color}
+                          fillOpacity="0.4"
+                          stroke={color}
+                          strokeWidth="2"
+                        />
+                        <text
+                          x={projected.x}
+                          y={projected.y + 4}
+                          textAnchor="middle"
+                          style={{ fontSize: '11px', fontWeight: 700, fill: '#0f172a' }}
+                        >
+                          {point.city}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+            ) : (
+              <p className="overview-muted">Map coordinates are unavailable for the selected cities.</p>
             )}
-          </div>
-        </div>
-      )}
 
-      {activeTab === 'labor' && visibleLaborMarketData.length > 0 && (
-        <div className="charts-section">
-          <h2>Labor Market Comparison ({selectedYear})</h2>
-          <div className="charts-grid">
-            {[...new Set(visibleLaborMarketData.map((d) => d.indicator_name))].map(
-              (indicatorName) => {
-                const indicatorRow = visibleLaborMarketData.find(
-                  (d) => d.indicator_name === indicatorName
-                );
-                const unit = indicatorRow?.unit_of_measure;
-                const indicatorCode = indicatorRow?.indicator_code;
-                const { data: chartData, normalized } = buildCityComparisonBarData(
-                  visibleLaborMarketData,
-                  indicatorName,
-                  indicatorCode,
-                  unit,
-                  selectedYear
-                );
-                if (chartData.length === 0) return null;
-
-                return (
-                <div key={indicatorName} className="chart-container">
-                  <BarChart
-                    data={chartData}
-                    title={chartTitleWithScale(indicatorName, normalized)}
-                    xLabel="City"
-                    yLabel={chartYLabel(unit, normalized)}
-                    highlightCity="Duisburg"
-                    colorMap={CITY_COLOR_MAP}
-                  />
-                </div>
-              );
-            }
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'business' && visibleBusinessEconomyData.length > 0 && (
-        <div className="charts-section">
-          <h2>Business & GDP Comparison ({selectedYear})</h2>
-          <div className="charts-grid">
-            {[...new Set(visibleBusinessEconomyData.map((d) => d.indicator_name))].map(
-              (indicatorName) => {
-                const indicatorRow = visibleBusinessEconomyData.find(
-                  (d) => d.indicator_name === indicatorName
-                );
-                const unit = indicatorRow?.unit_of_measure;
-                const indicatorCode = indicatorRow?.indicator_code;
-                const { data: chartData, normalized } = buildCityComparisonBarData(
-                  visibleBusinessEconomyData,
-                  indicatorName,
-                  indicatorCode,
-                  unit,
-                  selectedYear
-                );
-                if (chartData.length === 0) return null;
-
-                return (
-                  <div key={indicatorName} className="chart-container">
-                    <BarChart
-                      data={chartData}
-                      title={chartTitleWithScale(indicatorName, normalized)}
-                      xLabel="City"
-                      yLabel={chartYLabel(unit, normalized)}
-                      highlightCity="Duisburg"
-                      colorMap={CITY_COLOR_MAP}
-                    />
+            <div className="ranking-two-col">
+              <div className="rank-card">
+                <h3>Top 3 (Highest)</h3>
+                {topBottomRankings.top.map((row, index) => (
+                  <div key={`top-${row.city}`} className="rank-row">
+                    <span>#{index + 1} {row.city}</span>
+                    <strong>{formatKpiValue(overviewMetricConfig.code, row.value)}</strong>
                   </div>
-                );
-              }
-            )}
+                ))}
+              </div>
+              <div className="rank-card">
+                <h3>Bottom 3 (Lowest)</h3>
+                {topBottomRankings.bottom.map((row, index) => (
+                  <div key={`bottom-${row.city}`} className="rank-row">
+                    <span>#{index + 1} {row.city}</span>
+                    <strong>{formatKpiValue(overviewMetricConfig.code, row.value)}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="overview-block head-to-head-block">
+            <h2>Head-to-Head Comparison</h2>
+            <div className="head-to-head-controls">
+              <div className="control-group">
+                <label htmlFor="head-metric-select">Metric:</label>
+                <select
+                  id="head-metric-select"
+                  value={headToHeadMetricConfig.code}
+                  onChange={(event) => setHeadToHeadMetricCode(event.target.value)}
+                >
+                  {OVERVIEW_KPI_CONFIG.map((metric) => (
+                    <option key={metric.code} value={metric.code}>
+                      {metric.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="control-group">
+                <label htmlFor="head-city-left">City A:</label>
+                <select
+                  id="head-city-left"
+                  value={headToHeadLeftCity}
+                  onChange={(event) => setHeadToHeadLeftCity(event.target.value)}
+                >
+                  {headToHeadCities.map((city) => (
+                    <option key={`left-${city}`} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="control-group">
+                <label htmlFor="head-city-right">City B:</label>
+                <select
+                  id="head-city-right"
+                  value={headToHeadRightCity}
+                  onChange={(event) => setHeadToHeadRightCity(event.target.value)}
+                >
+                  {headToHeadCities.map((city) => (
+                    <option key={`right-${city}`} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="head-to-head-grid">
+              <div className="head-city-card">
+                <h3>{headToHeadLeftCity}</h3>
+                <p>{formatKpiValue(headToHeadMetricConfig.code, headToHeadLeftValue)}</p>
+              </div>
+              <div className="head-city-card">
+                <h3>{headToHeadRightCity}</h3>
+                <p>{formatKpiValue(headToHeadMetricConfig.code, headToHeadRightValue)}</p>
+              </div>
+              <div className="head-summary-card">
+                <h3>Difference</h3>
+                {headToHeadDelta !== null ? (
+                  <>
+                    <p>{formatKpiValue(headToHeadMetricConfig.code, Math.abs(headToHeadDelta))}</p>
+                    <span className={headToHeadDelta >= 0 ? 'kpi-up' : 'kpi-down'}>
+                      {headToHeadLeftCity} {headToHeadDelta >= 0 ? 'higher' : 'lower'} by{' '}
+                      {Math.abs(headToHeadDeltaPct ?? 0).toFixed(1)}%
+                    </span>
+                  </>
+                ) : (
+                  <p className="overview-muted">Not enough data for this comparison.</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {activeTab === 'finance' && visiblePublicFinanceData.length > 0 && (
-        <div className="charts-section">
-          <h2>Public Finance Comparison ({selectedYear})</h2>
-          {publicFinanceUsesFallbackYear && (
+      {activeTab === 'demographics' &&
+        renderGroupedBarSections(
+          visibleDemographicsData,
+          'demographics',
+          `Demographics Comparison (${selectedYear})`,
+          `No demographics data available for ${selectedYear} with current city filter.`
+        )}
+
+      {activeTab === 'labor' &&
+        renderGroupedBarSections(
+          visibleLaborMarketData,
+          'labor',
+          `Labor Market Comparison (${selectedYear})`,
+          `No labor market data available for ${selectedYear} with current city filter.`
+        )}
+
+      {activeTab === 'business' &&
+        renderGroupedBarSections(
+          visibleBusinessEconomyData,
+          'business',
+          `Business & GDP Comparison (${selectedYear})`,
+          `No business economy data available for ${selectedYear} with current city filter.`
+        )}
+
+      {activeTab === 'ict' &&
+        ((ictSingleRegion || ictIsStateScope)
+          ? renderIctKpiSections(
+              visibleIctData,
+              `ICT / Digitization Snapshot (${selectedYear})`,
+              `No ICT or digitization data available for ${selectedYear} with available geographies.`,
+              ictLeadingHint
+            )
+          : renderGroupedBarSections(
+              visibleIctData,
+              'ict',
+              `ICT / Digitization Comparison (${selectedYear})`,
+              `No ICT or digitization data available for ${selectedYear} with available geographies.`,
+              ictLeadingHint,
+              {
+                xAxisLabel: 'Region',
+                highlightCity: null,
+                colorMap: null,
+              }
+            ))}
+
+      {activeTab === 'finance' &&
+        renderGroupedBarSections(
+          visiblePublicFinanceData,
+          'finance',
+          `Public Finance Comparison (${selectedYear})`,
+          `No public finance data available for ${selectedYear} with current city filter.`,
+          publicFinanceUsesFallbackYear ? (
             <p className="data-hint">
               Some indicators are shown at their latest available year up to {selectedYear}.
             </p>
-          )}
-          <div className="charts-grid">
-            {[...new Set(visiblePublicFinanceData.map((d) => d.indicator_name))].map(
-              (indicatorName) => {
-                const indicatorRow = visiblePublicFinanceData.find(
-                  (d) => d.indicator_name === indicatorName
-                );
-                const unit = indicatorRow?.unit_of_measure;
-                const indicatorCode = indicatorRow?.indicator_code;
-                const { data: chartData, normalized } = buildCityComparisonBarData(
-                  visiblePublicFinanceData,
-                  indicatorName,
-                  indicatorCode,
-                  unit,
-                  selectedYear
-                );
-                if (chartData.length === 0) return null;
-
-                return (
-                  <div key={indicatorName} className="chart-container">
-                    <BarChart
-                      data={chartData}
-                      title={chartTitleWithScale(indicatorName, normalized)}
-                      xLabel="City"
-                      yLabel={chartYLabel(unit, normalized)}
-                      highlightCity="Duisburg"
-                      colorMap={CITY_COLOR_MAP}
-                    />
-                  </div>
-                );
-              }
-            )}
-          </div>
-        </div>
-      )}
+          ) : null
+        )}
 
       {activeTab === 'trends' && viewMode === 'cities' && trendLineData.length > 0 && (
         <div className="charts-section">
@@ -1648,7 +2099,7 @@ function App() {
                 data={trendLineData}
                 title={chartTitleWithScale(visibleTimeSeriesData[0]?.indicator_name || 'Time Series', shouldNormalizeTrends)}
                 highlightCity="Duisburg"
-                maxFractionDigits={shouldNormalizeTrends ? 2 : 0}
+                maxFractionDigits={shouldNormalizeTrends ? 2 : (visibleTimeSeriesData[0]?.unit_of_measure?.match(/prozent|percent|%/i) ? 1 : 0)}
               />
             )}
           </div>
@@ -1705,34 +2156,10 @@ function App() {
                 data={categoryLineData}
                 title={chartTitleWithScale(categoryData[0]?.indicator_name || 'Category Breakdown', shouldNormalizeCategories)}
                 highlightCity={null}
-                maxFractionDigits={shouldNormalizeCategories ? 2 : 0}
+                maxFractionDigits={shouldNormalizeCategories ? 2 : (categoryData[0]?.unit_of_measure?.match(/prozent|percent|%/i) ? 1 : 0)}
               />
             )}
           </div>
-        </div>
-      )}
-
-      {activeTab === 'demographics' && visibleDemographicsData.length === 0 && (
-        <div className="no-data">
-          <p>No demographics data available for {selectedYear} with current city filter.</p>
-        </div>
-      )}
-
-      {activeTab === 'labor' && visibleLaborMarketData.length === 0 && (
-        <div className="no-data">
-          <p>No labor market data available for {selectedYear} with current city filter.</p>
-        </div>
-      )}
-
-      {activeTab === 'business' && visibleBusinessEconomyData.length === 0 && (
-        <div className="no-data">
-          <p>No business economy data available for {selectedYear} with current city filter.</p>
-        </div>
-      )}
-
-      {activeTab === 'finance' && visiblePublicFinanceData.length === 0 && (
-        <div className="no-data">
-          <p>No public finance data available for {selectedYear} with current city filter.</p>
         </div>
       )}
 

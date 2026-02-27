@@ -1,0 +1,18 @@
+branch-defaults:
+  default:
+    environment: regional-nrw-env
+    group_suffix: null
+global:
+  application_name: regional-nrw-api
+  branch: null
+  default_ec2_keyname: null
+  default_platform: Node.js 20 running on 64bit Amazon Linux 2023
+  default_region: eu-central-1
+  include_git_submodules: true
+  instance_profile: null
+  platform_name: null
+  platform_version: null
+  profile: regional-nrw
+  repository: null
+  sc: null
+  workspace_type: Application

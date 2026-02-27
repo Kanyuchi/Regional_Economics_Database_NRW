@@ -1,0 +1,104 @@
+# =============================================================================
+# Day 4 – CI/CD: Deploy Node.js backend to AWS Elastic Beanstalk
+# =============================================================================
+# Triggers automatically on push to main when backend files change.
+# Can also be triggered manually via the "Run workflow" button in GitHub.
+#
+# Required GitHub Secrets (Settings → Secrets and variables → Actions):
+#   AWS_ACCESS_KEY_ID       – regional-nrw-deploy IAM user access key
+#   AWS_SECRET_ACCESS_KEY   – regional-nrw-deploy IAM user secret key
+#
+# EB CLI note:
+#   .elasticbeanstalk/config.yml references the [regional-nrw] named profile.
+#   This workflow recreates that profile from the GitHub Secrets so the EB CLI
+#   finds it without any changes to config.yml.
+# =============================================================================
+
+name: "Deploy Backend → Elastic Beanstalk"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "duisburg-web-application/backend/**"
+      - "!duisburg-web-application/backend/tests/**"  # tests don't need a deploy
+  workflow_dispatch:  # allow manual trigger from GitHub UI
+
+env:
+  AWS_REGION:  eu-central-1
+  EB_APP:      regional-nrw-api
+  EB_ENV:      regional-nrw-env
+  BACKEND_DIR: duisburg-web-application/backend
+
+jobs:
+  deploy:
+    name: "Deploy Backend to EB"
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Source code ──────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. AWS named profile for EB CLI ─────────────────────────────────────
+      # aws-actions/configure-aws-credentials sets env vars, but the EB CLI
+      # reads ~/.aws/credentials for the named profile in config.yml.
+      # Passing secrets via step env: keeps them masked in logs.
+      - name: Configure AWS named profile for EB CLI
+        env:
+          KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          SECRET:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          mkdir -p ~/.aws
+          printf "[regional-nrw]\naws_access_key_id=%s\naws_secret_access_key=%s\n" \
+            "$KEY_ID" "$SECRET" > ~/.aws/credentials
+          printf "[profile regional-nrw]\nregion=eu-central-1\noutput=json\n" \
+            >> ~/.aws/config
+          echo "  AWS named profile [regional-nrw] configured"
+
+      # Also configure env vars so `aws` CLI commands (not just eb) work
+      - name: Configure AWS env vars
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      # ── 3. EB CLI ───────────────────────────────────────────────────────────
+      - name: Install EB CLI
+        run: pip3 install --quiet awsebcli
+
+      # ── 4. Deploy ───────────────────────────────────────────────────────────
+      # eb deploy bundles all files not in .ebignore, uploads to S3,
+      # creates a new application version, and triggers a rolling update.
+      # --timeout 20 waits up to 20 min for the environment to go Green.
+      - name: Deploy to Elastic Beanstalk
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          eb deploy ${{ env.EB_ENV }} --timeout 20
+          echo "  EB environment: ${{ env.EB_ENV }}"
+          echo "  EB application: ${{ env.EB_APP }}"
+
+      # ── 5. Verify health after deploy ───────────────────────────────────────
+      - name: Smoke test – /api/health
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 15 \
+            "http://regional-nrw-env.eba-s26pyuip.eu-central-1.elasticbeanstalk.com/api/health")
+          if [[ "$HTTP_CODE" == "200" ]]; then
+            echo "  /api/health → 200 OK"
+          else
+            echo "  WARNING: /api/health returned ${HTTP_CODE}"
+            exit 1
+          fi
+
+      # ── 6. Summary ──────────────────────────────────────────────────────────
+      - name: Deployment summary
+        run: |
+          echo ""
+          echo "════════════════════════════════════════════"
+          echo "  Backend deployment complete"
+          echo "  EB env : ${{ env.EB_ENV }}"
+          echo "  Commit : ${{ github.sha }}"
+          echo "  Branch : ${{ github.ref_name }}"
+          echo "════════════════════════════════════════════"

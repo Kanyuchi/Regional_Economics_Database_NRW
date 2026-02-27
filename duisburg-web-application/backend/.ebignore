@@ -1,0 +1,17 @@
+# ── Dependencies (EB runs npm install on the instance) ──────────────────────
+node_modules/
+
+# ── Dev/test artefacts ───────────────────────────────────────────────────────
+tests/
+mcp/
+
+# ── Secrets (injected via eb setenv, never bundled) ─────────────────────────
+.env
+.env.*
+
+# ── Logs & local caches ──────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── Large local data files (not needed at runtime) ──────────────────────────
+dim_indicator_*.json

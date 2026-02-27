@@ -29,14 +29,18 @@ const ScatterChart = ({
     );
     if (cleanData.length === 0) return;
 
-    const margin = { top: 44, right: 180, bottom: 72, left: 90 };
+    // left margin extended to prevent long Y-axis labels from clipping
+    const margin = { top: 44, right: 180, bottom: 72, left: 110 };
     const width = 980 - margin.left - margin.right;
     const height = 520 - margin.top - margin.bottom;
 
+    const totalWidth = width + margin.left + margin.right;
+    const totalHeight = height + margin.top + margin.bottom;
     const svg = d3
       .select(svgRef.current)
-      .attr('width', width + margin.left + margin.right)
-      .attr('height', height + margin.top + margin.bottom)
+      .attr('width', totalWidth)
+      .attr('height', totalHeight)
+      .attr('viewBox', `0 0 ${totalWidth} ${totalHeight}`)
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 

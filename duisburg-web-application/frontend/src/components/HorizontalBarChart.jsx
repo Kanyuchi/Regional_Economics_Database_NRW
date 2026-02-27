@@ -33,10 +33,13 @@ const HorizontalBarChart = ({
     const width = 960 - margin.left - margin.right;
     const height = Math.max(320, cleanData.length * 44);
 
+    const totalWidth = width + margin.left + margin.right;
+    const totalHeight = height + margin.top + margin.bottom;
     const svg = d3
       .select(svgRef.current)
-      .attr('width', width + margin.left + margin.right)
-      .attr('height', height + margin.top + margin.bottom)
+      .attr('width', totalWidth)
+      .attr('height', totalHeight)
+      .attr('viewBox', `0 0 ${totalWidth} ${totalHeight}`)
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 

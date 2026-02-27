@@ -19,16 +19,19 @@ const AreaChart = ({ data, title, xLabel = 'X Axis', yLabel = 'Y Axis', highligh
     // Clear previous chart
     d3.select(svgRef.current).selectAll('*').remove();
 
-    // Set up dimensions
-    const margin = { top: 40, right: 150, bottom: 60, left: 80 };
+    // Set up dimensions — right margin extended to fit "Mülheim an der Ruhr" legend label
+    const margin = { top: 40, right: 185, bottom: 60, left: 80 };
     const width = 900 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
 
     // Create SVG
+    const totalWidth = width + margin.left + margin.right;
+    const totalHeight = height + margin.top + margin.bottom;
     const svg = d3
       .select(svgRef.current)
-      .attr('width', width + margin.left + margin.right)
-      .attr('height', height + margin.top + margin.bottom)
+      .attr('width', totalWidth)
+      .attr('height', totalHeight)
+      .attr('viewBox', `0 0 ${totalWidth} ${totalHeight}`)
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 

@@ -29,10 +29,13 @@ const BarChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg', col
     const height = 400 - margin.top - margin.bottom;
 
     // Create SVG
+    const totalWidth = width + margin.left + margin.right;
+    const totalHeight = height + margin.top + margin.bottom;
     const svg = d3
       .select(svgRef.current)
-      .attr('width', width + margin.left + margin.right)
-      .attr('height', height + margin.top + margin.bottom)
+      .attr('width', totalWidth)
+      .attr('height', totalHeight)
+      .attr('viewBox', `0 0 ${totalWidth} ${totalHeight}`)
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
@@ -148,7 +151,7 @@ const BarChart = ({ data, title, xLabel, yLabel, highlightCity = 'Duisburg', col
       .transition()
       .duration(800)
       .attr('y', (d) => y(d.value))
-      .attr('height', (d) => height - y(d.value));
+      .attr('height', (d) => Math.max(0, height - y(d.value)));
 
     return () => {
       tooltip.remove();

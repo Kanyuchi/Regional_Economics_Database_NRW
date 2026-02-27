@@ -1,249 +1,214 @@
-# Duisburg Economic Dashboard
+# NRW Regional Economics Dashboard
 
-A comprehensive dashboard for visualizing regional economic data for Duisburg and neighboring cities in the NRW region.
+A production web application for visualising 50 years of economic, demographic, and labour market data across five Ruhr cities — hosted on AWS.
 
-## Features
+## 🌐 Live Application
 
-- **Overview Tab**: Key information about Duisburg and comparison cities
-- **Demographics Tab**: Population and demographic indicators comparison
-- **Labor Market Tab**: Employment, unemployment, and labor market metrics
-- **Trends Tab**: Historical time series data with D3.js line charts
-- **Interactive Visualizations**: Bar charts and line charts with tooltips
-- **City Comparison**: Compare Duisburg with Düsseldorf, Essen, Oberhausen, Mülheim an der Ruhr
-- **Chat Assistant**: Docked chat drawer with minimize/reset; slides the dashboard left to keep tabs visible; supports table responses and chart-aware answers.
+**https://d127sfxjaas1uw.cloudfront.net**
+
+---
+
+## Dashboard Tabs
+
+| Tab | What it shows |
+|---|---|
+| **Overview** | KPI cards — Population, GDP, Unemployment, Median Wage |
+| **Demographics** | Population structure, age, nationality, migration background |
+| **Labor Market** | Employment, unemployment, wages, commuter flows |
+| **Business & GDP** | Business registrations, GDP by sector, insolvencies |
+| **ICT** | Broadband and digitisation indicators |
+| **Finance** | Municipal revenues and income tax |
+| **Trends** | 50-year D3.js time series with multi-city overlay |
+| **Chat** | AI assistant for natural language data queries |
+
+**Cities covered:** Duisburg · Düsseldorf · Essen · Oberhausen · Mülheim an der Ruhr
+
+---
+
+## Production Architecture
+
+```
+Browser → CloudFront (HTTPS)
+            ├── /*       → S3 bucket (React SPA)
+            └── /api/*   → Elastic Beanstalk (Node.js API)
+                              └── RDS PostgreSQL 15 (484,997 rows)
+```
+
+| Layer | Service | Details |
+|---|---|---|
+| CDN | Amazon CloudFront | Distribution `ESPS80U2L42VS`, PriceClass_100 |
+| Frontend | Amazon S3 | `regional-nrw-frontend-329631044553`, private + OAC |
+| Backend | AWS Elastic Beanstalk | `regional-nrw-env`, Node.js 20, t3.small, eu-central-1 |
+| Database | Amazon RDS PostgreSQL 15 | `regional-economics-db`, db.t3.micro, 20GB gp3 |
+
+---
 
 ## Technology Stack
 
-### Backend
-- Node.js
-- Express
-- PostgreSQL (pg driver)
-- CORS enabled
-
 ### Frontend
-- React 19
-- Vite (build tool)
-- D3.js (data visualization)
-- Axios (API calls)
+- **React 19** — UI framework
+- **Vite 7** — build tool (content-hashed assets, immutable CDN cache)
+- **D3.js 7** — all chart rendering
+- **Axios** — API client
 
-## Database
+### Backend
+- **Node.js 20** / **Express 4** — API server
+- **pg (node-postgres)** — PostgreSQL driver
+- **OpenAI SDK** — AI chatbot (requires `OPENAI_API_KEY`)
 
-The dashboard connects to the `regional_db` PostgreSQL database containing:
-- Demographics data
-- Labor market indicators
-- Business economy metrics
-- Public finance data
-- Time series from 1995-2024
+---
 
-## Setup Instructions
+## API Reference
+
+Base URL (production): `https://d127sfxjaas1uw.cloudfront.net`
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/health` | Service health check |
+| GET | `/api/cities` | The 5 comparison cities |
+| GET | `/api/indicators` | All 103 economic indicators |
+| GET | `/api/years` | Available year range |
+| GET | `/api/demographics/:year` | Demographics data for a year |
+| GET | `/api/labor-market/:year` | Labour market data for a year |
+| GET | `/api/business-economy/:year` | Business economy data for a year |
+| GET | `/api/public-finance/:year` | Public finance data for a year |
+| GET | `/api/timeseries/:indicatorCode` | Full time series for any indicator |
+| GET | `/api/indicators/group/:tab` | Indicators grouped by dashboard tab |
+| POST | `/api/chat` | AI chatbot — natural language data query |
+
+### Example API calls
+```bash
+# Health check
+curl https://d127sfxjaas1uw.cloudfront.net/api/health
+
+# Get all indicators
+curl https://d127sfxjaas1uw.cloudfront.net/api/indicators
+
+# Population time series
+curl https://d127sfxjaas1uw.cloudfront.net/api/timeseries/total_population
+
+# Labour market for 2023
+curl https://d127sfxjaas1uw.cloudfront.net/api/labor-market/2023
+```
+
+---
+
+## Local Development
 
 ### Prerequisites
-- Node.js (v16 or higher)
-- PostgreSQL 17 (already installed and running)
-- regional_db database (already configured)
+- Node.js 18+
+- Access to a PostgreSQL database (local or the production RDS endpoint)
 
-### Backend Setup
+### Backend
 
-1. Navigate to the backend directory:
-   ```bash
-   cd /Users/fadzie/Desktop/duisburg-dashboard/backend
-   ```
+```bash
+cd duisburg-web-application/backend
+npm install
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+# Copy and fill in environment variables
+cp .env.example .env
+```
 
-3. Verify the `.env` file settings:
-   ```
-   DB_HOST=localhost
-   DB_PORT=5432
-   DB_NAME=regional_db
-   DB_USER=fadzie
-   DB_PASSWORD=
-   PORT=3001
-   OPENAI_API_KEY= # optional, required for LLM chatbot
-   OPENAI_MODEL=gpt-4o-mini
-   ```
+Minimum `.env` for local development:
+```
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=regional_db
+DB_USER=your_user
+DB_PASSWORD=your_password
+PORT=5000
+CORS_ORIGINS=http://localhost:5173
+OPENAI_API_KEY=          # optional — enables AI chat
+OPENAI_MODEL=gpt-4o-mini
+```
 
-4. Start the backend server:
-   ```bash
-   npm start
-   ```
+```bash
+npm run dev    # starts on http://localhost:5000 with nodemon
+```
 
-   Or for development with auto-reload:
-   ```bash
-   npm run dev
-   ```
+### Frontend
 
-   The API will be available at `http://localhost:3001`
+```bash
+cd duisburg-web-application/frontend
+npm install
+VITE_API_BASE="http://localhost:5000" npm run dev
+# opens http://localhost:5173
+```
 
-### Frontend Setup
+> **Note:** Leave `VITE_API_BASE` empty for production builds — CloudFront proxies `/api/*` to the backend so the app uses `window.location.origin` at runtime.
 
-1. Navigate to the frontend directory:
-   ```bash
-   cd /Users/fadzie/Desktop/duisburg-dashboard/frontend
-   ```
+---
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+## CI/CD — Automated Deployments
 
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
+Any push to `main` triggers automatic deployment via GitHub Actions:
 
-   The dashboard will be available at `http://localhost:5173`
+- **Frontend changes** (`frontend/**`) → Vite build → S3 sync → CloudFront invalidation
+- **Backend changes** (`backend/**`) → EB CLI deploy → `/api/health` smoke test
 
-### Frontend Build for Production
+Workflow files:
+- `.github/workflows/deploy-frontend.yml`
+- `.github/workflows/deploy-backend.yml`
 
-1. Set the API base (optional; defaults to current origin):
-   ```bash
-   export VITE_API_BASE=https://your-backend.example.com
-   ```
-2. Build:
-   ```bash
-   npm run build
-   ```
-   Deploy `frontend/dist` to your static host (Vercel/Netlify/Cloudflare Pages) or serve via Nginx/your backend. Ensure CORS if frontend/backends are on different origins.
+Required GitHub Secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `CF_DISTRIBUTION_ID`
 
-### Docker Deploy (Backend)
-1. Build:
-   ```bash
-   cd duisburg-web-application/backend
-   docker build -t duisburg-backend .
-   ```
-2. Run (envs required):
-   ```bash
-   docker run -p 3001:3001 \
-     -e DB_HOST=... -e DB_PORT=5432 -e DB_NAME=regional_db \
-     -e DB_USER=... -e DB_PASSWORD=... -e PORT=3001 \
-     duisburg-backend
-   ```
+---
 
-### Nginx + Static Frontend + API Proxy
-- Build frontend (`npm run build` in `frontend`) and place `dist/` in `/usr/share/nginx/html`.
-- Use `deploy/nginx.conf` as a template to proxy `/api` to the backend and serve the SPA with fallback to `index.html`.
-- Adjust `backend_api` upstream to your backend host:port.
+## Monitoring
 
-### Docker Compose (Backend + Frontend)
-- Prereq: Docker/Compose installed.
-- From `duisburg-web-application/`:
-  ```bash
-  docker-compose up --build
-  ```
-  - Backend available at `http://localhost:3001`
-  - Frontend at `http://localhost:8080` (proxies `/api` to backend)
-- Frontend build arg in compose defaults `VITE_API_BASE=http://backend:3001`.
-- Backend envs pulled from `backend/.env`; ensure they’re set before running compose.
+Five CloudWatch alarms are active:
 
-### Hosting Suggestions
-- Backend: Render/Railway/Fly/DigitalOcean App Platform with envs for DB and PORT.
-- Frontend: Vercel/Netlify/Cloudflare Pages (static) or Nginx serving `dist/` with `/api` proxy.
+| Alarm | Metric | Threshold |
+|---|---|---|
+| `nrw-rds-cpu-high` | RDS CPUUtilization | > 80% for 15 min |
+| `nrw-rds-storage-low` | RDS FreeStorageSpace | < 5 GB |
+| `nrw-rds-connections-high` | RDS DatabaseConnections | > 80 |
+| `nrw-cf-5xx-rate` | CloudFront 5xxErrorRate | > 1% |
+| `nrw-cf-error-rate` | CloudFront TotalErrorRate | > 5% |
 
-## Running the Dashboard
+Alerts → SNS → email (shaunkudzi@gmail.com)
 
-1. **Start Backend** (Terminal 1):
-   ```bash
-   cd /Users/fadzie/Desktop/duisburg-dashboard/backend
-   npm start
-   ```
+---
 
-2. **Start Frontend** (Terminal 2):
-   ```bash
-   cd /Users/fadzie/Desktop/duisburg-dashboard/frontend
-   npm run dev
-   ```
+## AWS Deployment Scripts
 
-3. Open your browser to `http://localhost:5173`
+All deployment scripts are in `scripts/aws/`:
 
-## AI Chatbot (Optional)
+```bash
+# Re-deploy frontend manually
+bash scripts/aws/06_deploy_frontend_cdn.sh
 
-The chatbot now mixes deterministic data answers with LLM phrasing:
+# Re-deploy backend manually
+bash scripts/aws/04_deploy_to_beanstalk.sh
 
-1. Set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) in `backend/.env`.
-2. Restart the backend (`npm start` or `npm run dev`).
-3. The frontend chat widget uses:
-   - Deterministic, DB-backed responses for business registrations/deregistrations, unemployment counts, and general indicator time series (e.g., “doctors in Duisburg 2019-2024”), returned with tables.
-   - Chart-aware context: current tab/indicator/year/chart type/view mode/selected city and recent chart data are sent to the backend so the bot can describe what you’re viewing.
-   - LLM fallback only when no deterministic path matches; the model is instructed not to invent numbers.
+# Run end-to-end tests
+bash scripts/aws/07_test_end_to_end.sh
 
-## API Endpoints
+# Re-run monitoring setup / update alert email
+ALERT_EMAIL="you@example.com" bash scripts/aws/08_setup_monitoring.sh
 
-- `GET /api/health` - Health check
-- `GET /api/cities` - Get all comparison cities
-- `GET /api/duisburg` - Get Duisburg information
-- `GET /api/demographics/:year` - Demographics data for a specific year
-- `GET /api/labor-market/:year` - Labor market data for a specific year
-- `GET /api/business-economy/:year` - Business economy data for a specific year
-- `GET /api/public-finance/:year` - Public finance data for a specific year
-- `GET /api/timeseries/:indicatorCode` - Time series data for an indicator
-- `GET /api/indicators` - Get all available indicators
-- `GET /api/years` - Get all available years
-- `POST /api/chat` - Chat assistant (deterministic responses + LLM fallback)
+# Verify Day 4 CI/CD setup
+bash scripts/aws/09_test_day4.sh
+```
 
-## MCP (Postgres) setup
-
-If you want the database accessible to Claude Code/Perplexity via MCP, use the custom server under `backend/mcp/postgres-server.js` (see `mcp/postgres-mcp.md`). It reads `backend/.env`, exposes the public schema, and supports read/write by default. Set `MCP_PORT` (or `PORT`) to avoid conflicts with the API port (e.g., `MCP_PORT=4545 npm run mcp`).
-
-## Dashboard Features
-
-### Overview Tab
-- Duisburg key information (region code, type, area)
-- List of comparison cities with Ruhr area designation
-
-### Demographics Tab
-- Bar charts comparing demographic indicators across cities
-- Filterable by year
-- Duisburg highlighted in blue
-
-### Labor Market Tab
-- Employment and unemployment metrics
-- Cross-city comparisons
-- Year selection
-
-### Trends Tab
-- Line charts showing historical trends
-- Multiple cities on same chart
-- Indicator selection dropdown
-- Time range: 2010-2024
-
-## Data Caching
-
-The dashboard queries data on-demand. Since regional economic data doesn't change frequently, you can:
-- Implement caching in the backend for better performance
-- Add a data refresh button
-- Schedule periodic data updates
-
-## Future Enhancements
-
-- Add more visualization types (pie charts, heat maps)
-- Implement data export (CSV, PDF)
-- Add filters for specific economic sectors
-- Include commuter data visualization
-- Add infrastructure and healthcare metrics
-- Implement user preferences/saved views
-- Add comparison with state (NRW) averages
+---
 
 ## Troubleshooting
 
-### Backend won't start
-- Ensure PostgreSQL is running: `brew services list`
-- Check database connection in `.env`
-- Verify port 3001 is not in use
+### Dashboard not loading
+- Check `https://d127sfxjaas1uw.cloudfront.net/api/health` — should return `{"status":"ok"}`
+- If health returns 5xx, check EB environment health in AWS Console
 
-### Frontend shows error
-- Ensure backend is running on port 3001
-- Check browser console for errors
-- Verify API calls in Network tab
+### Local dev — no data
+- Confirm PostgreSQL is running and `.env` DB credentials are correct
+- Run `npm run test:db` from the `backend/` directory to test the connection
 
-### No data showing
-- Check that regional_db has data
-- Verify year selection matches available data
-- Check browser console for API errors
+### CORS error in local dev
+- Ensure `CORS_ORIGINS=http://localhost:5173` is set in `backend/.env`
+- Restart the backend after changing `.env`
+
+---
 
 ## License
 
-Private project for regional economic analysis.
+MIT — see root `LICENSE` file.

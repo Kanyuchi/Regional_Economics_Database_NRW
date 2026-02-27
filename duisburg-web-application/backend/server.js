@@ -456,7 +456,7 @@ const corsOptions = {
           'http://127.0.0.1:8080',
         ]; // Local dev/preview defaults
 
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+    if (allowedOrigins.includes('*') || allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
       callback(null, true);
     } else {
       console.warn(`CORS blocked request from origin: ${origin}`);
@@ -536,6 +536,8 @@ app.get('/api/demographics/:year?', async (req, res) => {
         g.region_code,
         i.indicator_name,
         i.indicator_code,
+        i.indicator_category,
+        i.indicator_subcategory,
         i.unit_of_measure,
         t.year,
         t.quarter,
@@ -551,7 +553,7 @@ app.get('/api/demographics/:year?', async (req, res) => {
         AND i.is_active = true
         AND (i.indicator_category IN ('Demographics', 'demographics', 'Health', 'Infrastructure'))
         AND (fd.age_group = 'total' OR fd.age_group IS NULL)
-      GROUP BY g.region_name, g.region_code, i.indicator_name, i.indicator_code, i.unit_of_measure, t.year, t.quarter
+      GROUP BY g.region_name, g.region_code, i.indicator_name, i.indicator_code, i.indicator_category, i.indicator_subcategory, i.unit_of_measure, t.year, t.quarter
       ORDER BY g.region_name, i.indicator_name
     `, [year]);
     res.json(result.rows);
@@ -571,6 +573,8 @@ app.get('/api/labor-market/:year?', async (req, res) => {
         g.region_code,
         i.indicator_name,
         i.indicator_code,
+        i.indicator_category,
+        i.indicator_subcategory,
         i.unit_of_measure,
         t.year,
         t.quarter,
@@ -586,7 +590,7 @@ app.get('/api/labor-market/:year?', async (req, res) => {
         AND i.is_active = true
         AND (i.indicator_category = 'Labor Market' OR i.indicator_category = 'labor_market')
         AND (fd.age_group = 'total' OR fd.age_group IS NULL)
-      GROUP BY g.region_name, g.region_code, i.indicator_name, i.indicator_code, i.unit_of_measure, t.year, t.quarter
+      GROUP BY g.region_name, g.region_code, i.indicator_name, i.indicator_code, i.indicator_category, i.indicator_subcategory, i.unit_of_measure, t.year, t.quarter
       ORDER BY g.region_name, i.indicator_name
     `, [year]);
     res.json(result.rows);
@@ -606,6 +610,8 @@ app.get('/api/business-economy/:year?', async (req, res) => {
         g.region_code,
         i.indicator_name,
         i.indicator_code,
+        i.indicator_category,
+        i.indicator_subcategory,
         i.unit_of_measure,
         t.year,
         t.quarter,
@@ -621,13 +627,109 @@ app.get('/api/business-economy/:year?', async (req, res) => {
         AND i.is_active = true
         AND (i.indicator_category IN ('business_economy', 'GDP/GVA', 'Employee Compensation'))
         AND (fd.age_group = 'total' OR fd.age_group IS NULL)
-      GROUP BY g.region_name, g.region_code, i.indicator_name, i.indicator_code, i.unit_of_measure, t.year, t.quarter
+      GROUP BY g.region_name, g.region_code, i.indicator_name, i.indicator_code, i.indicator_category, i.indicator_subcategory, i.unit_of_measure, t.year, t.quarter
       ORDER BY g.region_name, i.indicator_name
     `, [year]);
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching business economy data:', err);
     res.status(500).json({ error: 'Failed to fetch business economy data' });
+  }
+});
+
+// Get ICT / digitization data for comparison
+app.get('/api/ict/:year?', async (req, res) => {
+  try {
+    const year = Number.isFinite(Number(req.params.year)) ? Number(req.params.year) : 2023;
+    const result = await pool.query(`
+      WITH aggregated AS (
+        SELECT
+          g.region_name,
+          g.region_code,
+          g.region_type,
+          i.indicator_name,
+          i.indicator_code,
+          i.indicator_category,
+          i.indicator_subcategory,
+          i.unit_of_measure,
+          t.year,
+          t.quarter,
+          SUM(fi.value) as value,
+          STRING_AGG(DISTINCT fi.notes, '; ') as notes
+        FROM fact_ict_indicators fi
+        JOIN dim_geography g ON fi.geo_id = g.geo_id
+        JOIN dim_indicator i ON fi.indicator_id = i.indicator_id
+        JOIN dim_time t ON fi.time_id = t.time_id
+        WHERE g.region_name IS NOT NULL
+          AND t.year = (
+            SELECT MAX(t2.year)
+            FROM fact_ict_indicators fi2
+            JOIN dim_time t2 ON fi2.time_id = t2.time_id
+            WHERE t2.year <= $1
+          )
+          AND i.is_active = true
+          AND (i.indicator_category IN ('ICT', 'ict', 'ICT/Digitization', 'Digitization'))
+        GROUP BY g.region_name, g.region_code, g.region_type, i.indicator_name, i.indicator_code, i.indicator_category, i.indicator_subcategory, i.unit_of_measure, t.year, t.quarter
+      ),
+      ranked AS (
+        SELECT
+          *,
+          CASE
+            WHEN region_name IN ('Duisburg', 'Düsseldorf', 'Essen', 'Oberhausen', 'Mülheim an der Ruhr') THEN 1
+            WHEN LOWER(region_name) IN ('nordrhein-westfalen', 'north rhine-westphalia', 'nrw') THEN 2
+            WHEN LOWER(region_type) IN ('state', 'federal_state', 'bundesland') THEN 3
+            ELSE 4
+          END AS geo_priority,
+          ROW_NUMBER() OVER (
+            PARTITION BY indicator_code, region_name
+            ORDER BY year DESC, quarter DESC NULLS LAST
+          ) AS year_rn
+        FROM aggregated
+      ),
+      latest_per_region AS (
+        SELECT *
+        FROM ranked
+        WHERE year_rn = 1
+      ),
+      best_scope AS (
+        SELECT MIN(geo_priority) AS best_priority
+        FROM latest_per_region
+      ),
+      final_rows AS (
+        SELECT *
+        FROM latest_per_region
+        WHERE geo_priority = (SELECT best_priority FROM best_scope)
+      ),
+      dedup AS (
+        SELECT
+          *,
+          ROW_NUMBER() OVER (
+            PARTITION BY region_name, indicator_code
+            ORDER BY year DESC, quarter DESC NULLS LAST
+          ) AS rn
+        FROM final_rows
+      )
+      SELECT
+        region_name,
+        region_code,
+        region_type,
+        indicator_name,
+        indicator_code,
+        indicator_category,
+        indicator_subcategory,
+        unit_of_measure,
+        year,
+        quarter,
+        value,
+        notes
+      FROM dedup
+      WHERE rn = 1
+      ORDER BY region_name, indicator_name
+    `, [year]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching ICT data:', err);
+    res.status(500).json({ error: 'Failed to fetch ICT data' });
   }
 });
 
@@ -642,6 +744,8 @@ app.get('/api/public-finance/:year?', async (req, res) => {
           g.region_code,
           i.indicator_name,
           i.indicator_code,
+          i.indicator_category,
+          i.indicator_subcategory,
           i.unit_of_measure,
           t.year,
           t.quarter,
@@ -657,7 +761,7 @@ app.get('/api/public-finance/:year?', async (req, res) => {
           AND i.is_active = true
           AND (i.indicator_category IN ('Public Finance', 'public_finance'))
           AND (fd.age_group = 'total' OR fd.age_group IS NULL)
-        GROUP BY g.region_name, g.region_code, i.indicator_name, i.indicator_code, i.unit_of_measure, t.year, t.quarter
+        GROUP BY g.region_name, g.region_code, i.indicator_name, i.indicator_code, i.indicator_category, i.indicator_subcategory, i.unit_of_measure, t.year, t.quarter
       ),
       ranked AS (
         SELECT
@@ -673,6 +777,8 @@ app.get('/api/public-finance/:year?', async (req, res) => {
         region_code,
         indicator_name,
         indicator_code,
+        indicator_category,
+        indicator_subcategory,
         unit_of_measure,
         year,
         quarter,
@@ -797,28 +903,201 @@ app.get('/api/years', async (req, res) => {
 app.get('/api/indicator-metadata', async (req, res) => {
   try {
     const result = await pool.query(`
+      WITH base AS (
+        SELECT
+          i.indicator_code,
+          i.indicator_name,
+          i.indicator_category,
+          i.indicator_subcategory,
+          i.unit_of_measure,
+          t.year,
+          g.region_name,
+          g.region_type,
+          'fact_demographics'::text AS source_table
+        FROM fact_demographics f
+        JOIN dim_geography g ON f.geo_id = g.geo_id
+        JOIN dim_indicator i ON f.indicator_id = i.indicator_id
+        JOIN dim_time t ON f.time_id = t.time_id
+        WHERE i.is_active = true
+          AND (f.age_group = 'total' OR f.age_group IS NULL)
+
+        UNION ALL
+
+        SELECT
+          i.indicator_code,
+          i.indicator_name,
+          i.indicator_category,
+          i.indicator_subcategory,
+          i.unit_of_measure,
+          t.year,
+          g.region_name,
+          g.region_type,
+          'fact_ict_indicators'::text AS source_table
+        FROM fact_ict_indicators fi
+        JOIN dim_geography g ON fi.geo_id = g.geo_id
+        JOIN dim_indicator i ON fi.indicator_id = i.indicator_id
+        JOIN dim_time t ON fi.time_id = t.time_id
+        WHERE i.is_active = true
+      ),
+      scoped AS (
+        SELECT
+          *,
+          CASE
+            WHEN region_type = 'urban_district' AND region_name = ANY($1) THEN 1
+            WHEN LOWER(region_name) IN ('nordrhein-westfalen', 'north rhine-westphalia', 'nrw')
+              OR LOWER(region_type) IN ('state', 'federal_state', 'bundesland') THEN 2
+            ELSE 3
+          END AS scope_rank,
+          CASE
+            WHEN region_type = 'urban_district' AND region_name = ANY($1) THEN 'city'
+            WHEN LOWER(region_name) IN ('nordrhein-westfalen', 'north rhine-westphalia', 'nrw')
+              OR LOWER(region_type) IN ('state', 'federal_state', 'bundesland') THEN 'state'
+            ELSE COALESCE(region_type, 'other')
+          END AS data_scope
+        FROM base
+      ),
+      summary AS (
+        SELECT
+          indicator_code,
+          indicator_name,
+          indicator_category,
+          indicator_subcategory,
+          unit_of_measure,
+          MIN(year) AS min_year,
+          MAX(year) AS max_year,
+          COUNT(DISTINCT year) AS year_count,
+          BOOL_OR(source_table = 'fact_demographics') AS has_demographics_source,
+          BOOL_OR(source_table = 'fact_ict_indicators') AS has_ict_source
+        FROM scoped
+        GROUP BY indicator_code, indicator_name, indicator_category, indicator_subcategory, unit_of_measure
+      ),
+      best_scope AS (
+        SELECT DISTINCT ON (indicator_code)
+          indicator_code,
+          data_scope,
+          source_table AS primary_source_table
+        FROM scoped
+        ORDER BY indicator_code, scope_rank ASC, source_table ASC
+      )
       SELECT
-        i.indicator_code,
-        i.indicator_name,
-        i.indicator_category,
-        MIN(t.year) as min_year,
-        MAX(t.year) as max_year,
-        COUNT(DISTINCT t.year) as year_count
-      FROM fact_demographics f
-      JOIN dim_geography g ON f.geo_id = g.geo_id
-      JOIN dim_indicator i ON f.indicator_id = i.indicator_id
-      JOIN dim_time t ON f.time_id = t.time_id
-      WHERE g.region_type = 'urban_district'
-        AND g.region_name IN ('Duisburg', 'Düsseldorf', 'Essen', 'Oberhausen', 'Mülheim an der Ruhr')
-        AND i.is_active = true
-        AND (f.age_group = 'total' OR f.age_group IS NULL)
-      GROUP BY i.indicator_code, i.indicator_name, i.indicator_category
-      ORDER BY i.indicator_category, i.indicator_name
-    `);
+        s.indicator_code,
+        s.indicator_name,
+        s.indicator_category,
+        s.indicator_subcategory,
+        s.unit_of_measure,
+        s.min_year,
+        s.max_year,
+        s.year_count,
+        b.data_scope,
+        b.primary_source_table,
+        s.has_demographics_source,
+        s.has_ict_source
+      FROM summary s
+      JOIN best_scope b ON b.indicator_code = s.indicator_code
+      ORDER BY s.indicator_category, s.indicator_name
+    `, [CITY_LIST]);
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching indicator metadata:', err);
     res.status(500).json({ error: 'Failed to fetch indicator metadata' });
+  }
+});
+
+// Get full indicator coverage map (source tables + geography scope + year ranges)
+app.get('/api/data-coverage', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      WITH base AS (
+        SELECT
+          i.indicator_code,
+          i.indicator_name,
+          i.indicator_category,
+          i.indicator_subcategory,
+          i.unit_of_measure,
+          t.year,
+          g.region_name,
+          g.region_type,
+          'fact_demographics'::text AS source_table
+        FROM fact_demographics f
+        JOIN dim_geography g ON f.geo_id = g.geo_id
+        JOIN dim_indicator i ON f.indicator_id = i.indicator_id
+        JOIN dim_time t ON f.time_id = t.time_id
+        WHERE i.is_active = true
+          AND (f.age_group = 'total' OR f.age_group IS NULL)
+
+        UNION ALL
+
+        SELECT
+          i.indicator_code,
+          i.indicator_name,
+          i.indicator_category,
+          i.indicator_subcategory,
+          i.unit_of_measure,
+          t.year,
+          g.region_name,
+          g.region_type,
+          'fact_ict_indicators'::text AS source_table
+        FROM fact_ict_indicators fi
+        JOIN dim_geography g ON fi.geo_id = g.geo_id
+        JOIN dim_indicator i ON fi.indicator_id = i.indicator_id
+        JOIN dim_time t ON fi.time_id = t.time_id
+        WHERE i.is_active = true
+      ),
+      scoped AS (
+        SELECT
+          *,
+          CASE
+            WHEN region_type = 'urban_district' AND region_name = ANY($1) THEN 1
+            WHEN LOWER(region_name) IN ('nordrhein-westfalen', 'north rhine-westphalia', 'nrw')
+              OR LOWER(region_type) IN ('state', 'federal_state', 'bundesland') THEN 2
+            ELSE 3
+          END AS scope_rank,
+          CASE
+            WHEN region_type = 'urban_district' AND region_name = ANY($1) THEN 'city'
+            WHEN LOWER(region_name) IN ('nordrhein-westfalen', 'north rhine-westphalia', 'nrw')
+              OR LOWER(region_type) IN ('state', 'federal_state', 'bundesland') THEN 'state'
+            ELSE COALESCE(region_type, 'other')
+          END AS scope_label
+        FROM base
+      ),
+      best_scope AS (
+        SELECT DISTINCT ON (indicator_code)
+          indicator_code,
+          scope_label AS recommended_scope
+        FROM scoped
+        ORDER BY indicator_code, scope_rank ASC
+      )
+      SELECT
+        s.indicator_code,
+        s.indicator_name,
+        s.indicator_category,
+        s.indicator_subcategory,
+        s.unit_of_measure,
+        MIN(s.year) AS min_year,
+        MAX(s.year) AS max_year,
+        COUNT(DISTINCT s.year) AS year_count,
+        COUNT(*) AS row_count,
+        COUNT(DISTINCT s.region_name) AS region_count,
+        ARRAY_AGG(DISTINCT s.source_table ORDER BY s.source_table) AS source_tables,
+        ARRAY_AGG(DISTINCT s.scope_label ORDER BY s.scope_label) AS available_scopes,
+        ARRAY_AGG(DISTINCT s.region_name ORDER BY s.region_name)
+          FILTER (WHERE s.scope_rank <= 2) AS key_regions,
+        b.recommended_scope
+      FROM scoped s
+      JOIN best_scope b ON b.indicator_code = s.indicator_code
+      GROUP BY
+        s.indicator_code,
+        s.indicator_name,
+        s.indicator_category,
+        s.indicator_subcategory,
+        s.unit_of_measure,
+        b.recommended_scope
+      ORDER BY s.indicator_category, s.indicator_name
+    `, [CITY_LIST]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching data coverage:', err);
+    res.status(500).json({ error: 'Failed to fetch data coverage' });
   }
 });
 
@@ -828,18 +1107,52 @@ app.get('/api/indicator-years/:indicatorCode', async (req, res) => {
     const { indicatorCode } = req.params;
     const normalizedIndicatorCode = normalizeIndicatorCode(indicatorCode);
     const result = await pool.query(`
-      SELECT DISTINCT t.year
-      FROM fact_demographics f
-      JOIN dim_geography g ON f.geo_id = g.geo_id
-      JOIN dim_indicator i ON f.indicator_id = i.indicator_id
-      JOIN dim_time t ON f.time_id = t.time_id
-      WHERE g.region_type = 'urban_district'
-        AND g.region_name IN ('Duisburg', 'Düsseldorf', 'Essen', 'Oberhausen', 'Mülheim an der Ruhr')
-        AND i.indicator_code = $1
-        AND i.is_active = true
-        AND (f.age_group = 'total' OR f.age_group IS NULL)
-      ORDER BY t.year DESC
-    `, [normalizedIndicatorCode]);
+      WITH base AS (
+        SELECT
+          t.year,
+          g.region_name,
+          g.region_type
+        FROM fact_demographics f
+        JOIN dim_geography g ON f.geo_id = g.geo_id
+        JOIN dim_indicator i ON f.indicator_id = i.indicator_id
+        JOIN dim_time t ON f.time_id = t.time_id
+        WHERE i.indicator_code = $1
+          AND i.is_active = true
+          AND (f.age_group = 'total' OR f.age_group IS NULL)
+
+        UNION ALL
+
+        SELECT
+          t.year,
+          g.region_name,
+          g.region_type
+        FROM fact_ict_indicators fi
+        JOIN dim_geography g ON fi.geo_id = g.geo_id
+        JOIN dim_indicator i ON fi.indicator_id = i.indicator_id
+        JOIN dim_time t ON fi.time_id = t.time_id
+        WHERE i.indicator_code = $1
+          AND i.is_active = true
+      ),
+      ranked AS (
+        SELECT
+          year,
+          CASE
+            WHEN region_type = 'urban_district' AND region_name = ANY($2) THEN 1
+            WHEN LOWER(region_name) IN ('nordrhein-westfalen', 'north rhine-westphalia', 'nrw')
+              OR LOWER(region_type) IN ('state', 'federal_state', 'bundesland') THEN 2
+            ELSE 3
+          END AS scope_rank
+        FROM base
+      ),
+      best_scope AS (
+        SELECT MIN(scope_rank) AS best_scope_rank
+        FROM ranked
+      )
+      SELECT DISTINCT year
+      FROM ranked
+      WHERE scope_rank = (SELECT best_scope_rank FROM best_scope)
+      ORDER BY year DESC
+    `, [normalizedIndicatorCode, CITY_LIST]);
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching indicator years:', err);
@@ -1252,10 +1565,13 @@ app.listen(PORT, HOST, () => {
   console.log(`  GET /api/demographics/:year - Demographics data`);
   console.log(`  GET /api/labor-market/:year - Labor market data`);
   console.log(`  GET /api/business-economy/:year - Business economy data`);
+  console.log(`  GET /api/ict/:year - ICT and digitization data`);
   console.log(`  GET /api/public-finance/:year - Public finance data`);
   console.log(`  GET /api/timeseries/:indicatorCode - Time series data`);
   console.log(`  GET /api/timeseries/:indicatorCode/categories - Category breakdown`);
   console.log(`  GET /api/indicators - Available indicators`);
   console.log(`  GET /api/years - Available years`);
+  console.log(`  GET /api/indicator-metadata - Indicator scope and year coverage`);
+  console.log(`  GET /api/data-coverage - Full data inventory by indicator`);
   console.log(`  POST /api/chat - AI chatbot endpoint\n`);
 });

@@ -1,0 +1,108 @@
+# =============================================================================
+# Day 4 – CI/CD: Deploy React frontend to S3 + CloudFront
+# =============================================================================
+# Triggers automatically on push to main when frontend files change.
+# Can also be triggered manually via the "Run workflow" button in GitHub.
+#
+# Required GitHub Secrets (Settings → Secrets and variables → Actions):
+#   AWS_ACCESS_KEY_ID       – regional-nrw-deploy IAM user access key
+#   AWS_SECRET_ACCESS_KEY   – regional-nrw-deploy IAM user secret key
+#   CF_DISTRIBUTION_ID      – CloudFront distribution ID (run 09_test_day4.sh to get it)
+#
+# Architecture reminder:
+#   CloudFront ──/──────────→ S3 (React SPA, immutable cache for assets)
+#               └── /api/* → Elastic Beanstalk (API, no cache)
+# =============================================================================
+
+name: "Deploy Frontend → S3 + CloudFront"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "duisburg-web-application/frontend/**"
+  workflow_dispatch:  # allow manual trigger from GitHub UI
+
+env:
+  AWS_REGION:   eu-central-1
+  S3_BUCKET:    regional-nrw-frontend-329631044553
+  CF_DOMAIN:    d127sfxjaas1uw.cloudfront.net
+  FRONTEND_DIR: duisburg-web-application/frontend
+
+jobs:
+  deploy:
+    name: "Build & Deploy Frontend"
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Source code ──────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Node.js + dependency cache ──────────────────────────────────────
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ${{ env.FRONTEND_DIR }}
+
+      # ── 3. Production build ─────────────────────────────────────────────────
+      # VITE_API_BASE is intentionally empty so the app uses window.location.origin
+      # at runtime. CloudFront proxies /api/* to EB — no hard-coded URL needed.
+      - name: Build (Vite production)
+        run: npm run build
+        working-directory: ${{ env.FRONTEND_DIR }}
+        env:
+          VITE_API_BASE: ""
+
+      # ── 4. AWS credentials ──────────────────────────────────────────────────
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      # ── 5. Upload hashed assets (Vite fingerprints filenames → safe to cache forever)
+      - name: Sync hashed assets to S3 (immutable cache)
+        run: |
+          aws s3 sync ${{ env.FRONTEND_DIR }}/dist/ s3://${{ env.S3_BUCKET }}/ \
+            --delete \
+            --exclude "*.html" \
+            --cache-control "public, max-age=31536000, immutable"
+
+      # ── 6. Upload index.html separately with no-cache ───────────────────────
+      # index.html must never be cached — it references hashed asset URLs.
+      # Browsers must always fetch the latest shell to pick up new deploys.
+      - name: Upload index.html (no-cache)
+        run: |
+          aws s3 cp ${{ env.FRONTEND_DIR }}/dist/index.html \
+            s3://${{ env.S3_BUCKET }}/index.html \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --content-type "text/html; charset=utf-8"
+
+      # ── 7. Invalidate CDN cache so users get the new index.html immediately ──
+      - name: Invalidate CloudFront cache
+        run: |
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CF_DISTRIBUTION_ID }} \
+            --paths "/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+          echo "  CloudFront invalidation created: ${INVALIDATION_ID}"
+
+      # ── 8. Summary ──────────────────────────────────────────────────────────
+      - name: Deployment summary
+        run: |
+          echo ""
+          echo "════════════════════════════════════════════"
+          echo "  Frontend deployment complete"
+          echo "  URL    : https://${{ env.CF_DOMAIN }}"
+          echo "  Commit : ${{ github.sha }}"
+          echo "  Branch : ${{ github.ref_name }}"
+          echo "════════════════════════════════════════════"

@@ -31,6 +31,9 @@ export const apiService = {
   // Get business economy data
   getBusinessEconomy: (year = 2023) => api.get(`/business-economy/${year}`),
 
+  // Get ICT / digitization data
+  getIct: (year = 2023) => api.get(`/ict/${year}`),
+
   // Get public finance data
   getPublicFinance: (year = 2023) => api.get(`/public-finance/${year}`),
 
