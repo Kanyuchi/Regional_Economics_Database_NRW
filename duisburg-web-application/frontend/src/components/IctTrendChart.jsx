@@ -222,16 +222,17 @@ const IctTrendChart = ({ yearData }) => {
       });
 
     // ── Value labels (only for first and last year) ──────────
+    // Both labels sit to the RIGHT of their dot so they stay inside the
+    // chart area and never collide with the y-axis tick labels.
     dotData
       .filter((d) => d.year === years[0] || d.year === latestYear)
       .forEach((d) => {
-        const isFirst = d.year === years[0];
         svg
           .append('text')
-          .attr('x', (x(d.year) ?? 0) + (isFirst ? -10 : 10))
+          .attr('x', (x(d.year) ?? 0) + 10)
           .attr('y', (y(d.name) ?? 0) + y.bandwidth() / 2)
           .attr('dy', '0.35em')
-          .attr('text-anchor', isFirst ? 'end' : 'start')
+          .attr('text-anchor', 'start')
           .style('font-size', '9px')
           .style('fill', getDotColor(d.value))
           .style('font-weight', '500')
