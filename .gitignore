@@ -187,3 +187,19 @@ model_compression_techniques/
 # Build outputs
 **/dist/
 **/build/
+
+# ========================================
+# SENSITIVE RESEARCH / API FILES
+# ========================================
+# Files containing real API credentials or endpoints (never commit)
+landesdatenbank_endpoint.md
+
+# Database dumps and migration logs (large / sensitive)
+scripts/aws/*.dump
+scripts/aws/*.log
+
+# Screenshots and local screenshots folder
+web_app_pics/
+
+# EB app version artifacts (binary, large)
+duisburg-web-application/backend/.elasticbeanstalk/app_versions/
